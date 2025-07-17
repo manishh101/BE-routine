@@ -1,0 +1,610 @@
+[
+  {
+    "name": "Engineering Mathematics I",
+    "code": "SH401",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 1,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Computer Programming",
+    "code": "CT401",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 1,
+    "credits": {"theory": 2, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Drawing I",
+    "code": "ME401",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 1,
+    "credits": {"theory": 0, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 0, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Physics",
+    "code": "SH402",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 1,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Applied Mechanics",
+    "code": "CE401",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 1,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Basic Electrical Engineering",
+    "code": "EE401",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 1,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Mathematics II",
+    "code": "SH451",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 2,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Drawing II",
+    "code": "ME451",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 2,
+    "credits": {"theory": 0, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 0, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Basic Electronics Engineering",
+    "code": "EX451",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 2,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Chemistry",
+    "code": "SH453",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 2,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Thermodynamics & Heat Transfer",
+    "code": "ME452",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 2,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Workshop Technology",
+    "code": "ME453",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 2,
+    "credits": {"theory": 0, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 0, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Mathematics III",
+    "code": "SH501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Object Oriented Programming",
+    "code": "CT501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 2, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Electric Circuit Theory",
+    "code": "EE501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Theory of Computation",
+    "code": "CT502",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Electronics Devices & Circuits",
+    "code": "EX501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Digital Logic",
+    "code": "EX502",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 2, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Electromagnetics",
+    "code": "EX503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 3,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Numerical Methods",
+    "code": "SH553",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Applied Mathematics",
+    "code": "SH551",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Instrumentation I",
+    "code": "EE552",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Data Structures & Algorithm",
+    "code": "CT552",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 2, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Microprocessor",
+    "code": "EX551",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 2, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Discrete Structure",
+    "code": "CT551",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Electrical Machine",
+    "code": "EE554",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 4,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Communication English",
+    "code": "SH601",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Probability & Statistics",
+    "code": "SH602",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Software Engineering",
+    "code": "CT601",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Computer Organization & Architecture",
+    "code": "CT603",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+ {
+    "name": "Computer Graphics",
+    "code": "EX603",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Instrumentation II",
+    "code": "EX602",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Data Communication",
+    "code": "CT602",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 5,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Economics",
+    "code": "CE655",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 3, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Object Oriented Analysis & Design",
+    "code": "CT651",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Artificial Intelligence",
+    "code": "CT653",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Operating System",
+    "code": "CT656",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Embedded System",
+    "code": "CT655",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Database Management System",
+    "code": "CT652",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Minor Project",
+    "code": "CT654",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 6,
+    "credits": {"theory": 0, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 0, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "ICT Project Management",
+    "code": "CT701",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 2, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Organization & Management",
+    "code": "ME708",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 2, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Energy, Environment & Society",
+    "code": "EX701",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 1, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 1, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Distributed System",
+    "code": "CT703",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Computer Networks & Security",
+    "code": "CT702",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Digital Signal Analysis & Processing",
+    "code": "CT704",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Project I",
+    "code": "CT707",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 0, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 0, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Engineering Professional Practice",
+    "code": "CE752",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 2, "practical": 0, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 0, "tutorial": 0}
+  },
+  {
+    "name": "Information Systems",
+    "code": "CT751",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Internet & Intranet",
+    "code": "CT754",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Simulation & Modeling",
+    "code": "CT753",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 2, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 2, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Project II",
+    "code": "CT755",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 0, "practical": 2, "tutorial": 0},
+    "weeklyHours": {"theory": 0, "practical": 2, "tutorial": 0}
+  },
+  {
+    "name": "Data Mining and Warehousing",
+    "code": "CT72502",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Advanced Java Programming",
+    "code": "CT72501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Embedded System Design Using ARM",
+    "code": "CT72503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Image Processing & Pattern Recognition",
+    "code": "CT72504",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Web Technology",
+    "code": "CT72505",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Power Electronics",
+    "code": "EE72504",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Radar Technology",
+    "code": "EX72502",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Satellite Communication",
+    "code": "EX72503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Biomedical Instrumentation",
+    "code": "EX72504",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 7,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Agile Software Development",
+    "code": "CT76502",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Networking with IPv6",
+    "code": "CT76503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Advanced Computer Architecture",
+    "code": "CT76504",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Big Data Technologies",
+    "code": "CT76507",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Optical Fiber Communication System",
+    "code": "CT76501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Broadcast Engineering",
+    "code": "EX76503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Wireless Communication",
+    "code": "EX76504",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Database Management System",
+    "code": "EX76506",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Remote Sensing",
+    "code": "CT78501",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Multimedia System",
+    "code": "CT78503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Enterprise Application Design & Development",
+    "code": "CT78504",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Geographical Information System",
+    "code": "CT78507",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "XML Foundations & Applications",
+    "code": "CT78505",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Speech Processing",
+    "code": "CT78508",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  },
+  {
+    "name": "Telecommunication",
+    "code": "EX78503",
+    "programId": ["6866b1dcc39639d7a7c76cb8"],
+    "semester": 8,
+    "credits": {"theory": 3, "practical": 1, "tutorial": 0},
+    "weeklyHours": {"theory": 3, "practical": 1, "tutorial": 0}
+  }
+]

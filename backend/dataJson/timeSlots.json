@@ -1,0 +1,154 @@
+[
+  {
+    "_id": 1,
+    "label": "10:15 - 11:05",
+    "startTime": "10:15",
+    "endTime": "11:05",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 1,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 2,
+    "label": "11:05 - 11:55",
+    "startTime": "11:05",
+    "endTime": "11:55",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 2,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 3,
+    "label": "11:55 - 12:45",
+    "startTime": "11:55",
+    "endTime": "12:45",
+    "duration": 0,
+    "isBreak":true,
+    "dayType": "Regular",
+    "sortOrder": 3,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 4,
+    "label": "12:45 - 1:35",
+    "startTime": "12:45",
+    "endTime": "01:35",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 4,
+    "category": "Afternoon",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 5,
+    "label": "1:35-2:25",
+    "startTime": "01:35",
+    "endTime": "02:25",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 5,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 6,
+    "label": "2:25 - 3:15",
+    "startTime": "02:25",
+    "endTime": "03:15",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 6,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 7,
+    "label": "3:15 - 4:05",
+    "startTime": "03:15",
+    "endTime": "04:05",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 7,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "_id": 8,
+    "label": "4:05 - 4:55",
+    "startTime": "04:05",
+    "endTime": "04:55",
+    "duration": 0,
+    "isBreak": false,
+    "dayType": "Regular",
+    "sortOrder": 8,
+    "category": "Morning",
+    "applicableDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  }
+]

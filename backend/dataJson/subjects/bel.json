@@ -1,0 +1,462 @@
+[
+  {
+    "name": "Engineering Mathematics I",
+    "code": "SH401",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 1,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Computer Programming",
+    "code": "CT401",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 1,
+    "creditHours": 4.5,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 3,
+    "subjectType": "both"
+  },
+  {
+    "name": "Engineering Drawing I",
+    "code": "ME401",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 1,
+    "creditHours": 1.5,
+    "lectureHoursPerWeek": 0,
+    "practicalHoursPerWeek": 3,
+    "subjectType": "practical"
+  },
+  {
+    "name": "Engineering Physics",
+    "code": "SH452",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 1,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Applied Mechanics",
+    "code": "CE451",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 1,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Engineering Mathematics II",
+    "code": "SH451",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 2,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Object Oriented Programming",
+    "code": "CT451",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 2,
+    "creditHours": 4.5,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 3,
+    "subjectType": "both"
+  },
+  {
+    "name": "Engineering Drawing II",
+    "code": "ME451",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 2,
+    "creditHours": 1.5,
+    "lectureHoursPerWeek": 0,
+    "practicalHoursPerWeek": 3,
+    "subjectType": "practical"
+  },
+  {
+    "name": "Basic Electrical Engineering",
+    "code": "EE451",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 2,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Engineering Chemistry",
+    "code": "SH403",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 2,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Engineering Mathematics III",
+    "code": "SH501",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 3,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Electric Circuit Theory",
+    "code": "EE501",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 3,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Electronics Engineering I",
+    "code": "EX501",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 3,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Digital Logic",
+    "code": "EX503",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 3,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Object Oriented Programming",
+    "code": "CT503",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 3,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Electromagnetics",
+    "code": "EX502",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 3,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Electrical Engineering Materials",
+    "code": "EE551",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 4,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Numerical Methods",
+    "code": "SH553",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 4,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Instrumentation I",
+    "code": "EE552",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 4,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Applied Mathematics",
+    "code": "SH552",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 4,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Discrete Structure",
+    "code": "CT551",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 4,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Data Structure and Algorithms",
+    "code": "CT552",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 4,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Communication English",
+    "code": "SH602",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 5,
+    "creditHours": 2,
+    "lectureHoursPerWeek": 2,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Probability and Queuing Theory",
+    "code": "EX601",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 5,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Microprocessors",
+    "code": "EX602",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 5,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Computer Organization and Architecture",
+    "code": "EX603",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 5,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Control System",
+    "code": "EE601",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 5,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Data Communication",
+    "code": "EX604",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 5,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Engineering Economics",
+    "code": "SH651",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 6,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Computer Networks",
+    "code": "CT651",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 6,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Digital Signal Analysis and Processing",
+    "code": "EX651",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 6,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Communication System I",
+    "code": "EX652",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 6,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Antenna and Propagation",
+    "code": "EX653",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 6,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Embedded System",
+    "code": "CT652",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 6,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Project Management",
+    "code": "SH701",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 7,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Communication System II",
+    "code": "EX701",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 7,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "VLSI Design",
+    "code": "EX702",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 7,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "RF and Microwave Engineering",
+    "code": "EX703",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 7,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Project (Part A)",
+    "code": "EX704",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 7,
+    "creditHours": 2,
+    "lectureHoursPerWeek": 0,
+    "practicalHoursPerWeek": 3,
+    "subjectType": "practical"
+  },
+  {
+    "name": "Elective I",
+    "code": "EX725",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 7,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Organization and Management",
+    "code": "SH751",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 8,
+    "creditHours": 2,
+    "lectureHoursPerWeek": 2,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Telecommunication",
+    "code": "EX751",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 8,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Information and Network Security",
+    "code": "EX752",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 8,
+    "creditHours": 4,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 2,
+    "subjectType": "both"
+  },
+  {
+    "name": "Project (Part B)",
+    "code": "EX753",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 8,
+    "creditHours": 6,
+    "lectureHoursPerWeek": 0,
+    "practicalHoursPerWeek": 6,
+    "subjectType": "practical"
+  },
+  {
+    "name": "Elective II",
+    "code": "EX775",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 8,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  },
+  {
+    "name": "Elective III",
+    "code": "EX785",
+    "programId": ["ObjectId_of_BEX_Program"],
+    "semester": 8,
+    "creditHours": 3,
+    "lectureHoursPerWeek": 3,
+    "practicalHoursPerWeek": 0,
+    "subjectType": "theory"
+  }
+]
