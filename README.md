@@ -595,8 +595,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Room Vacancy Analysis (accessible via direct URL: `/room-vacancy-analysis`)
 - Department Management (accessible via direct URL: `/departments-manager`)
 
-For support, create an issue in the repository or contact the development team.
 
----
-
-**Latest Update**: December 2024 - Enhanced with comprehensive elective management system for 7th and 8th semester students, featuring cross-section scheduling and streamlined admin interface. 🎉
