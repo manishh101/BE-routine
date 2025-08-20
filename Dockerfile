@@ -1,7 +1,27 @@
-# Simple single-stage build for Coolify
+# Optimized build for Coolify deployment
+FROM node:20-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy package files for better caching
+COPY frontend/package*.json ./frontend/
+COPY backend/package*.json ./backend/
+
+# Install frontend dependencies and build
+WORKDIR /app/frontend
+RUN npm ci && npm run build
+
+# Install backend dependencies
+WORKDIR /app/backend
+RUN npm ci --omit=dev
+
+# Production stage
 FROM node:20-alpine
 
-# Install essential runtime dependencies
+# Install runtime dependencies
 RUN apk add --no-cache chromium wget
 
 # Set environment variables
@@ -12,15 +32,12 @@ ENV PORT=7102
 
 WORKDIR /app
 
-# Copy and install backend dependencies
-COPY backend/package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
-
-# Copy backend source
+# Copy backend files and node_modules from builder
+COPY --from=builder /app/backend/ ./
 COPY backend/ ./
 
-# Copy pre-built frontend
-COPY frontend/dist ./public
+# Copy built frontend from builder
+COPY --from=builder /app/frontend/dist ./public
 
 # Create non-root user and set permissions
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

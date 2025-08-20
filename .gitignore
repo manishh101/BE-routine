@@ -80,4 +80,4 @@ uploads/
 */uploads/
 
 # Documentation build
-docs/_build/
+docs/_build/frontend/dist/
