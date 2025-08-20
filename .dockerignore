@@ -4,6 +4,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Build outputs (will be built in Docker)
+frontend/dist
+backend/public
+
 # Runtime data
 pids
 *.pid
@@ -51,6 +55,7 @@ jest.config.js
 # Documentation
 *.md
 docs
+md/
 
 # Git
 .git
@@ -69,5 +74,5 @@ backend/tests
 *.xlsx
 *.pdf
 
-# Markdown documentation
-md/
+# Large files that aren't needed
+excelroutine/
