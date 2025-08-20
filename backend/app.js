@@ -51,7 +51,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-// const compression = require('compression'); // Available if compression package is installed
+const compression = require('compression');
 const connectDB = require('./config/db');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUI = require('swagger-ui-express');
@@ -115,8 +115,8 @@ app.use(helmet({
   },
 }));
 
-// Compression middleware for better performance (if compression package is available)
-// app.use(compression());
+// Compression middleware for better performance
+app.use(compression());
 
 // Logging middleware
 app.use(morgan('combined'));

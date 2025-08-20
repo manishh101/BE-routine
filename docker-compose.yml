@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "7102:7102"
+    environment:
+      - NODE_ENV=production
+      - PORT=7102
+      - MONGODB_URI=mongodb://mongo:27017/be-routine
+      - JWT_SECRET=your-super-secret-jwt-key-for-development-only
+      - JWT_EXPIRE=7d
+      - FRONTEND_URL=http://localhost:7102
+      - USE_RABBITMQ=false
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:7102/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=be-routine
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongo_data:
+
+networks:
+  default:
+    driver: bridge
