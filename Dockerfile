@@ -1,9 +1,6 @@
 # Optimized build for Coolify deployment
 FROM node:20-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /app
 
 # Copy package files for better caching
