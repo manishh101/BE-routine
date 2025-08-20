@@ -1,8 +1,8 @@
 # Simple single-stage build for Coolify
 FROM node:20-alpine
 
-# Install only essential runtime dependencies
-RUN apk add --no-cache chromium
+# Install essential runtime dependencies
+RUN apk add --no-cache chromium wget
 
 # Set environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
@@ -19,18 +19,18 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy backend source
 COPY backend/ ./
 
-# Copy pre-built frontend (build frontend locally or in Coolify build command)
+# Copy pre-built frontend
 COPY frontend/dist ./public
 
-# Create non-root user
+# Create non-root user and set permissions
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 7102
 
-# Simple health check
-HEALTHCHECK --interval=30s --timeout=10s \
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:7102/api/health || exit 1
 
 CMD ["npm", "start"]
