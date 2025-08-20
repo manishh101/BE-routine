@@ -1,0 +1,32 @@
+{
+  "name": "be-routine",
+  "version": "2.0.0",
+  "description": "IOE Pulchowk Campus Routine Management System",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm install && npm run build && cp -r dist ../backend/public",
+    "start": "cd backend && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "deploy:build": "./build-for-deployment.sh"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "dotenv": "^16.5.0",
+    "form-data": "^4.0.3",
+    "mongoose": "^8.16.0",
+    "node-fetch": "^2.7.0",
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^24.11.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "jsdom": "^26.1.0"
+  },
+  "keywords": ["routine", "management", "IOE", "Pulchowk", "academic"],
+  "author": "IOE Pulchowk Campus",
+  "license": "MIT"
+}

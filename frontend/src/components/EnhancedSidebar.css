@@ -1,0 +1,149 @@
+/* Enhanced sidebar menu items */
+.ant-menu-inline .ant-menu-item,
+.ant-menu-inline-collapsed .ant-menu-item {
+  border-radius: 6px !important;
+  margin: 4px 8px !important;
+  transition: all 0.2s ease !important;
+  padding-left: 24px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  width: calc(100% - 16px) !important;
+}
+
+/* Special case for collapsed menu items - center the icon and hide text */
+.ant-menu-inline-collapsed .ant-menu-item {
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Ensure text is not visible in collapsed mode */
+.ant-menu-inline-collapsed .ant-menu-item .ant-menu-title-content {
+  opacity: 0 !important;
+  display: none !important;
+}
+
+/* Make icons properly centered in collapsed mode */
+.ant-menu-inline-collapsed .ant-menu-item .anticon {
+  margin: 0 !important;
+  font-size: 20px !important;
+}
+
+/* Non-selected item hover styles */
+.ant-menu-inline .ant-menu-item:hover:not(.ant-menu-item-selected),
+.ant-menu-inline-collapsed .ant-menu-item:hover:not(.ant-menu-item-selected) {
+  background: rgba(102, 126, 234, 0.1) !important;
+  color: #333 !important;
+  transform: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 6px !important;
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+  width: calc(100% - 16px) !important;
+}
+
+/* Make sure hovering on selected items doesn't change anything */
+.ant-menu-inline .ant-menu-item-selected:hover,
+.ant-menu-inline-collapsed .ant-menu-item-selected:hover {
+  background: #667eea !important;
+  color: #ffffff !important;
+}
+
+/* Selected item styling */
+.ant-menu-inline .ant-menu-item-selected,
+.ant-menu-inline-collapsed .ant-menu-item-selected {
+  background: #667eea !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  padding-left: 24px !important;
+  border-radius: 6px !important;
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+  width: calc(100% - 16px) !important;
+}
+
+/* Fix padding for collapsed menu selected item */
+.ant-menu-inline-collapsed .ant-menu-item-selected {
+  padding: 0 !important;
+}
+
+/* Selected item text color */
+.ant-menu-inline .ant-menu-item-selected .ant-menu-title-content,
+.ant-menu-inline-collapsed .ant-menu-item-selected .ant-menu-title-content {
+  color: #ffffff !important;
+}
+
+/* Selected item icon color */
+.ant-menu-inline .ant-menu-item-selected .anticon,
+.ant-menu-inline-collapsed .ant-menu-item-selected .anticon {
+  color: #ffffff !important;
+}
+
+/* Remove default selected item indicator */
+.ant-menu-inline .ant-menu-item-selected::after,
+.ant-menu-inline-collapsed .ant-menu-item-selected::after {
+  display: none !important;
+}
+
+/* Enhanced menu group styling */
+.ant-menu-item-group-title {
+  position: relative !important;
+  padding-left: 24px !important;
+  color: #667eea !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+}
+
+/* Non-selected hover text color */
+.ant-menu-item:hover:not(.ant-menu-item-selected) span,
+.ant-menu-item:hover:not(.ant-menu-item-selected) .ant-menu-title-content {
+  color: #333 !important;
+}
+
+/* Remove any borders or outlines */
+.ant-menu-item,
+.ant-menu-item-selected,
+.ant-menu-item:hover,
+.ant-menu-item:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Clean modern menu appearance */
+.ant-menu.ant-menu-inline {
+  border-right: none !important;
+}
+
+/* Fix the ant-menu-item before pseudo-element */
+.ant-menu-item::before,
+.ant-menu-item::after {
+  display: none !important;
+}
+
+/* Make the sidebar background cleaner */
+.ant-layout-sider {
+  box-shadow: none !important;
+}
+
+/* Keep consistent padding for hover and selected states */
+.ant-menu-inline .ant-menu-item:hover:not(.ant-menu-item-selected) {
+  padding-left: 24px !important;
+}
+
+/* Override any Ant Design border stylings */
+.ant-menu-light .ant-menu-item-selected {
+  border: none !important;
+  box-shadow: none !important;
+}

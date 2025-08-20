@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: be-routine
+    env: node
+    buildCommand: |
+      cd frontend && npm install && npm run build
+      cd ../backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        fromDatabase:
+          name: be-routine-db
+          property: connectionString
+      - key: PORT
+        value: 7102
+
+databases:
+  - name: be-routine-db
+    databaseName: bct_routine
+    user: admin
