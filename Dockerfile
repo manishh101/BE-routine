@@ -12,10 +12,12 @@ COPY backend/package*.json ./backend/
 
 # Install frontend dependencies and build
 WORKDIR /app/frontend
+COPY frontend/ ./
 RUN npm ci && npm run build
 
 # Install backend dependencies
 WORKDIR /app/backend
+COPY backend/ ./
 RUN npm ci --omit=dev
 
 # Production stage
@@ -32,11 +34,8 @@ ENV PORT=7102
 
 WORKDIR /app
 
-# Copy backend files and node_modules from builder
+# Copy backend source and built frontend
 COPY --from=builder /app/backend/ ./
-COPY backend/ ./
-
-# Copy built frontend from builder
 COPY --from=builder /app/frontend/dist ./public
 
 # Create non-root user and set permissions

@@ -41,11 +41,6 @@ logs
 ehthumbs.db
 Thumbs.db
 
-# Build directories
-backend/public
-frontend/dist
-build
-
 # Testing
 __tests__
 tests
@@ -61,20 +56,14 @@ docs
 .git
 .gitignore
 
-# Docker
-Dockerfile
+# Docker (but keep Dockerfile)
 docker-compose.yml
-.dockerignore
 
 # Development files
 backend/coverage
 frontend/coverage
 backend/__tests__
 backend/tests
-backend/migrate-*.js
-backend/seed-*.js
-backend/check-*.js
-backend/populate-*.js
 
 # Excel files and PDFs
 *.xlsx
