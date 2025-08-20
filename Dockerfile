@@ -23,12 +23,10 @@ RUN npm ci --omit=dev
 # Production stage
 FROM node:20-alpine
 
-# Install runtime dependencies
-RUN apk add --no-cache chromium wget
+# Install minimal runtime dependencies
+RUN apk add --no-cache wget
 
 # Set environment variables
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV NODE_ENV=production
 ENV PORT=7102
 
