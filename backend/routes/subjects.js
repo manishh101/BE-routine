@@ -14,7 +14,13 @@ const {
   getSharedSubjects,
   getSubjectsByPrograms
 } = require('../controllers/subjectController');
-const { protect, authorize, optionalAuth } = require('../middleware/auth');
+const { protect, optionalAuth, authorize } = require('../middleware/auth');
+const { 
+  validateSubject, 
+  validateDepartmentAccess,
+  ensureDefaultDepartment 
+} = require('../middleware/validation');
+const cacheManager = require('../utils/cacheManager');
 const { check } = require('express-validator');
 
 /**
@@ -179,7 +185,11 @@ router.post('/bulk-test', createSubjectsBulk);
  *       200:
  *         description: List of subjects
  */
-router.get('/', optionalAuth, getSubjects);
+router.get('/', 
+  optionalAuth, 
+  cacheManager.createCacheMiddleware('static', 600), // 10 minute cache
+  getSubjects
+);
 
 /**
  * @swagger

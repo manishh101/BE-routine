@@ -30,14 +30,18 @@ const connectDB = async () => {
     });
 
     const conn = await mongoose.connect(mongoURI, {
-      socketTimeoutMS: 120000, // 2 minutes
+      socketTimeoutMS: parseInt(process.env.DB_SOCKET_TIMEOUT_MS) || 120000,
       connectTimeoutMS: 60000, // 1 minute  
       serverSelectionTimeoutMS: 60000, // 1 minute
       retryWrites: true,
       w: 'majority',
-      maxPoolSize: 20, // Increased pool size
-      minPoolSize: 5,
-      maxIdleTimeMS: 30000,
+      maxPoolSize: parseInt(process.env.DB_MAX_POOL_SIZE) || 50,
+      minPoolSize: parseInt(process.env.DB_MIN_POOL_SIZE) || 10,
+      maxIdleTimeMS: parseInt(process.env.DB_MAX_IDLE_TIME_MS) || 60000,
+      // Removed deprecated options: bufferMaxEntries, bufferCommands
+      // Connection management
+      heartbeatFrequencyMS: 10000, // More frequent heartbeats
+      autoIndex: process.env.NODE_ENV !== 'production', // Disable auto-indexing in production
     });
 
     return conn;

@@ -29,7 +29,18 @@ const fs = require('fs');
 const envPath = path.resolve(__dirname, '../.env');
 if (fs.existsSync(envPath)) {
   require('dotenv').config({ path: envPath });
-} else {
+}
+
+// Initialize database manager and query optimizer
+const dbManager = require('./utils/dbManager');
+const QueryOptimizer = require('./utils/queryOptimizer');
+const cacheManager = require('./utils/cacheManager');
+
+// Setup query monitoring
+QueryOptimizer.setupConnectionMonitoring();
+
+// Check if .env file exists
+if (!fs.existsSync(envPath)) {
   // In production, environment variables are set by the platform
   console.log('No .env file found - using platform environment variables');
 }
@@ -77,10 +88,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rate limiting middleware
+// Rate limiting middleware with improved settings
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 2000, // Much more permissive in development
+  max: process.env.NODE_ENV === 'production' ? 500 : 5000, // More reasonable production limit
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -88,6 +99,10 @@ const limiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Dynamic rate limiting based on endpoint
+  keyGenerator: (req) => {
+    return req.ip + ':' + req.path;
+  },
   // Skip rate limiting for certain IPs in development
   skip: (req) => {
     if (process.env.NODE_ENV !== 'production') {

@@ -1,42 +1,44 @@
-# Optimized build for Coolify deployment
+# Optimized production Dockerfile for BE-Routine
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files for better caching
+# Copy package files first for better caching
 COPY frontend/package*.json ./frontend/
 COPY backend/package*.json ./backend/
 
 # Install frontend dependencies and build
 WORKDIR /app/frontend
+RUN npm ci
 COPY frontend/ ./
-RUN npm ci && npm run build
+RUN npm run build
 
-# Install backend dependencies
+# Install backend dependencies (production only)
 WORKDIR /app/backend
-COPY backend/ ./
 RUN npm ci --omit=dev
+COPY backend/ ./
 
-# Production stage
+# Production stage  
 FROM node:20-alpine
 
-# Install minimal runtime dependencies
+# Install only wget for health checks
 RUN apk add --no-cache wget
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=7102
 
 WORKDIR /app
 
-# Copy backend source and built frontend
+# Copy built application from builder
 COPY --from=builder /app/backend/ ./
 COPY --from=builder /app/frontend/dist ./public
 
-# Create non-root user and set permissions
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN chown -R appuser:appgroup /app
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    chown -R appuser:appgroup /app
+
 USER appuser
+
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=7102
 
 EXPOSE 7102
 
