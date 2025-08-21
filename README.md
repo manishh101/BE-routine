@@ -923,10 +923,6 @@ This project is developed for **IOE Pulchowk Campus** internal use. All rights r
 **🎓 IOE Pulchowk Campus Routine Management System**  
 *Empowering Academic Excellence Through Intelligent Scheduling*
 
-**Status:** ✅ **Production Ready** | **Coverage:** 100% | **Tests:** All Passing
-
----
-
 **Made with ❤️ for IOE Pulchowk Campus**
 
 </div>
