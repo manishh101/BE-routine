@@ -710,17 +710,9 @@ exports.assignClass = async (req, res) => {
       slotData.roomId = roomId;
       
       // Denormalized display fields for performance
+      // Keep subject name clean - frontend will format with group labels
       slotData.subjectName_display = subject.name;
       slotData.subjectCode_display = subject.code;
-      
-      // Add lab group information to display name for practical classes
-      if (classType === 'P') {
-        const groupLabel = labGroup === 'A' ? (isAlternativeWeek ? ' (Group A - Alt Week)' : ' (Group A)') : 
-                           labGroup === 'B' ? (isAlternativeWeek ? ' (Group B - Alt Week)' : ' (Group B)') : 
-                           labGroup === 'ALL' ? ' (All Groups)' : 
-                           '';
-        slotData.subjectName_display = subject.name + groupLabel;
-      }
       
       slotData.teacherShortNames_display = teachers.map(t => 
         t.shortName || t.fullName.split(' ').map(n => n[0]).join('.')
@@ -1017,15 +1009,13 @@ exports.assignClassSpanned = async (req, res) => {
           subjectId: groupASubject,
           teacherIds: groupATeachers,
           roomId: groupARoom,
-          labGroup: sectionGroups[0], // First group for this section (A for AB, C for CD)
-          displaySuffix: isAlternativeWeek ? ` (Group ${sectionGroups[0]} - Alt Week)` : ` (Group ${sectionGroups[0]})`
+          labGroup: sectionGroups[0] // First group for this section (A for AB, C for CD)
         },
         {
           subjectId: groupBSubject,
           teacherIds: groupBTeachers,
           roomId: groupBRoom,
-          labGroup: sectionGroups[1], // Second group for this section (B for AB, D for CD)
-          displaySuffix: isAlternativeWeek ? ` (Group ${sectionGroups[1]} - Alt Week)` : ` (Group ${sectionGroups[1]})`
+          labGroup: sectionGroups[1] // Second group for this section (B for AB, D for CD)
         }
       ];
       
@@ -1082,8 +1072,8 @@ exports.assignClassSpanned = async (req, res) => {
             // Lab group info - CRITICAL: This allows separate slots for same time period
             labGroup: groupAssignment.labGroup,
             isAlternativeWeek: isAlternativeWeek,
-            // Denormalized display fields
-            subjectName_display: (subject?.name || 'Unknown Subject') + groupAssignment.displaySuffix,
+            // Denormalized display fields - Keep subject name clean, frontend will format
+            subjectName_display: subject?.name || 'Unknown Subject',
             subjectCode_display: subject?.code || '',
             teacherShortNames_display: teachers.map(t => 
               t?.shortName || (t?.fullName ? t.fullName.split(' ').map(n => n[0]).join('.') : 'Unknown')

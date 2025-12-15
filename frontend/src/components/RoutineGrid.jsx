@@ -495,29 +495,29 @@ const RoutineGrid = ({
     return populatedGrid;
   }, [routine, filteredTimeSlots, demoMode]);
 
-  // Helper function to generate lab group display labels
+  // Helper function to generate lab group display labels (PDF format with square brackets)
   const getLabGroupLabel = (classData, group = null) => {
     const isAltWeek = classData.isAlternativeWeek === true;
     
     // For merged groups (when same subject, teacher, room for both groups)
     if (classData.isMergedGroup && classData.labGroup) {
-      return isAltWeek ? `(${classData.labGroup} - Alt Week)` : `(${classData.labGroup})`;
+      return isAltWeek ? `[${classData.labGroup} - Alt Week]` : `[${classData.labGroup}]`;
     }
     
     // For multi-group classes, use the individual group data
     if (group) {
       // Use backend-provided labGroupLabel if available
       if (group.labGroupLabel) {
-        return isAltWeek ? `${group.labGroupLabel} - Alt Week` : group.labGroupLabel;
+        return isAltWeek ? `[${group.labGroupLabel} - Alt Week]` : `[${group.labGroupLabel}]`;
       }
       
       const groupLetter = group.labGroup;
-      return isAltWeek ? `(Group ${groupLetter} - Alt Week)` : `(Group ${groupLetter})`;
+      return isAltWeek ? `[Group ${groupLetter} - Alt Week]` : `[Group ${groupLetter}]`;
     }
     
     // For single classes, use backend-provided labGroupLabel if available
     if (classData.labGroupLabel) {
-      return isAltWeek ? `${classData.labGroupLabel} - Alt Week` : classData.labGroupLabel;
+      return isAltWeek ? `[${classData.labGroupLabel} - Alt Week]` : `[${classData.labGroupLabel}]`;
     }
     
     // IMPORTANT: Don't fall back to hardcoded labels, let the backend handle the mapping
@@ -526,19 +526,19 @@ const RoutineGrid = ({
       // For alt week, construct from section-aware backend data
       const sectionGroups = classData.section === 'CD' ? ['C', 'D'] : ['A', 'B'];
       if (classData.labGroup === 'ALL') {
-        return `(Groups ${sectionGroups.join(' & ')} - Alt Week)`;
+        return `[Groups ${sectionGroups.join(' & ')} - Alt Week]`;
       }
-      return classData.labGroup ? `(Group ${classData.labGroup} - Alt Week)` : '(Alt Week)';
+      return classData.labGroup ? `[Group ${classData.labGroup} - Alt Week]` : '[Alt Week]';
     }
     
     // Regular lab group labels - direct mapping (backend already stores correct values)
     if (classData.labGroup) {
       const sectionGroups = classData.section === 'CD' ? ['C', 'D'] : ['A', 'B'];
       if (classData.labGroup === 'ALL') {
-        return `(Groups ${sectionGroups.join(' & ')})`;
+        return `[Groups ${sectionGroups.join(' & ')}]`;
       }
       // Direct mapping - backend stores the correct group values
-      return `(Group ${classData.labGroup})`;
+      return `[Group ${classData.labGroup}]`;
     }
     
     return '';
@@ -1264,16 +1264,17 @@ const RoutineGrid = ({
                   fontSize: '12px',
                   color: '#333'
                 }}>
+                  {group.labGroup && (
+                    <span style={{ 
+                      fontSize: '10px', 
+                      marginRight: '4px',
+                      fontWeight: 'bold',
+                      color: '#333'
+                    }}>
+                      [Group {group.labGroup}]
+                    </span>
+                  )}
                   {getSubjectDisplayText(group)}
-                  <span style={{ 
-                    fontSize: '10px', 
-                    marginLeft: '4px',
-                    fontWeight: 'normal',
-                    opacity: 0.8,
-                    color: '#666'
-                  }}>
-                    {getLabGroupLabel(classData, group)}
-                  </span>
                 </div>
                 
                 {/* Class Type */}
@@ -1374,19 +1375,18 @@ const RoutineGrid = ({
           marginBottom: '3px',
           fontSize: '13px'
         }}>
-          {getSubjectDisplayText(classData)}
-          {/* Show lab group indicator for practical classes, alternative week classes, or merged groups */}
-          {((classData.classType === 'P' || classData.isAlternativeWeek === true) && classData.labGroup) || classData.isMergedGroup && (
+          {/* Show lab group indicator BEFORE subject name for practical classes */}
+          {((classData.classType === 'P' || classData.isAlternativeWeek === true) && classData.labGroup) || classData.isMergedGroup ? (
             <span style={{ 
               fontSize: '10px', 
-              marginLeft: '4px',
-              fontWeight: 'normal',
-              opacity: 0.8,
-              color: '#666'
+              marginRight: '4px',
+              fontWeight: 'bold',
+              color: '#333'
             }}>
               {getLabGroupLabel(classData)}
             </span>
-          )}
+          ) : null}
+          {getSubjectDisplayText(classData)}
         </div>
         
         {/* Class Type */}
@@ -1404,8 +1404,8 @@ const RoutineGrid = ({
           })()}
         </div>
         
-        {/* Teacher */}
-        {!teacherViewMode && !isRoomViewMode && (
+        {/* Teacher - don't show for BREAK */}
+        {!teacherViewMode && !isRoomViewMode && classData.classType !== 'BREAK' && (
           <div style={{ 
             fontSize: '11px',
             color: '#666',
@@ -1417,8 +1417,8 @@ const RoutineGrid = ({
           </div>
         )}
         
-        {/* Room - only show if not in room view mode */}
-        {!isRoomViewMode && (
+        {/* Room - only show if not in room view mode and not BREAK */}
+        {!isRoomViewMode && classData.classType !== 'BREAK' && (
           <div style={{ 
             fontSize: '11px',
             color: '#666',
