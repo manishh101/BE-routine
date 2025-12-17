@@ -315,6 +315,8 @@ const RoomManagement = () => {
     },
     onSuccess: () => {
       message.success('Room deleted successfully');
+      // Immediately invalidate rooms query for instant refresh
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
       // Use centralized cache invalidation for real-time sync across components
       invalidateAllRoutineRelatedCaches(queryClient, { reason: 'room_deleted' });
     },

@@ -1,41 +1,56 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider, theme, App as AntdApp } from 'antd';
+import { ConfigProvider, theme, App as AntdApp, Spin } from 'antd';
 import useAuthStore from './contexts/authStore';
 
-// Pages
-import HomePage from './pages/Dashboard';
-import LoginPage from './pages/Login';
-import ProgramRoutineView from './pages/ProgramRoutineView';
-import TeacherRoutinePage from './pages/TeacherRoutinePage';
-import ProgramRoutineManager from './pages/admin/ProgramRoutineManager';
+// Layout and login loaded immediately (critical)
 import Layout from './components/Layout';
-import SubjectsManager from './pages/admin/Subjects';
-import TeachersManager from './pages/admin/Teachers';
-import RoomsManager from './pages/admin/RoomManagement';
-import Programs from './pages/admin/Programs';
-import TimeSlotManagement from './pages/admin/TimeSlotManagement';
-import ExcelDemo from './pages/ExcelDemo';
-import TeacherExcelDemo from './pages/TeacherExcelDemo';
-import TeacherAPITest from './pages/TeacherAPITest';
-import RoomRoutinePage from './pages/RoomRoutinePage';
-import PublicSubjects from './pages/PublicSubjects';
-import TeacherMeetingScheduler from './pages/TeacherMeetingScheduler';
+import LoginPage from './pages/Login';
+
+// Lazy load all other pages for better performance
+const HomePage = lazy(() => import('./pages/Dashboard'));
+const ProgramRoutineView = lazy(() => import('./pages/ProgramRoutineView'));
+const TeacherRoutinePage = lazy(() => import('./pages/TeacherRoutinePage'));
+const ProgramRoutineManager = lazy(() => import('./pages/admin/ProgramRoutineManager'));
+const SubjectsManager = lazy(() => import('./pages/admin/Subjects'));
+const TeachersManager = lazy(() => import('./pages/admin/Teachers'));
+const RoomsManager = lazy(() => import('./pages/admin/RoomManagement'));
+const Programs = lazy(() => import('./pages/admin/Programs'));
+const TimeSlotManagement = lazy(() => import('./pages/admin/TimeSlotManagement'));
+const ExcelDemo = lazy(() => import('./pages/ExcelDemo'));
+const TeacherExcelDemo = lazy(() => import('./pages/TeacherExcelDemo'));
+const TeacherAPITest = lazy(() => import('./pages/TeacherAPITest'));
+const RoomRoutinePage = lazy(() => import('./pages/RoomRoutinePage'));
+const PublicSubjects = lazy(() => import('./pages/PublicSubjects'));
+const TeacherMeetingScheduler = lazy(() => import('./pages/TeacherMeetingScheduler'));
 
 // New Admin Pages - Phase 1
-import DepartmentManagement from './pages/admin/DepartmentManagement';
-import AcademicCalendarManagement from './pages/admin/AcademicCalendarManagement';
-import SessionManagement from './pages/admin/SessionManagement';
-import ElectiveManagement from './pages/admin/ElectiveManagement';
-import ConflictDetection from './pages/admin/ConflictDetection';
+const DepartmentManagement = lazy(() => import('./pages/admin/DepartmentManagement'));
+const AcademicCalendarManagement = lazy(() => import('./pages/admin/AcademicCalendarManagement'));
+const SessionManagement = lazy(() => import('./pages/admin/SessionManagement'));
+const ElectiveManagement = lazy(() => import('./pages/admin/ElectiveManagement'));
+const ConflictDetection = lazy(() => import('./pages/admin/ConflictDetection'));
 
 // New Admin Pages - Phase 2
-import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
-import LabGroupManagement from './pages/admin/LabGroupManagement';
-import UserManagement from './pages/admin/UserManagement';
-import TemplateManagement from './pages/admin/TemplateManagement';
-import RoomVacancyAnalysis from './pages/admin/RoomVacancyAnalysis';
+const AnalyticsDashboard = lazy(() => import('./pages/admin/AnalyticsDashboard'));
+const LabGroupManagement = lazy(() => import('./pages/admin/LabGroupManagement'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const TemplateManagement = lazy(() => import('./pages/admin/TemplateManagement'));
+const RoomVacancyAnalysis = lazy(() => import('./pages/admin/RoomVacancyAnalysis'));
+
+// Loading component for Suspense
+const PageLoader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh',
+    background: '#f5f7fa'
+  }}>
+    <Spin size="large" tip="Loading..." />
+  </div>
+);
 
 // Protected route component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -157,16 +172,17 @@ function App() {
       >
         <AntdApp>
           <Router>
-            <Routes>
-            {/* Login route - outside of Layout */}
-            <Route path="/admin/login" element={<LoginPage />} />
-            
-            {/* Routes with Layout */}
-            <Route path="/" element={<Layout />}>
-              {/* Public Routes */}
-              <Route index element={<HomePage />} />
-              <Route path="program-routine" element={<ProgramRoutineView />} />
-              <Route path="teacher-routine" element={<TeacherRoutinePage />} />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+              {/* Login route - outside of Layout */}
+              <Route path="/admin/login" element={<LoginPage />} />
+              
+              {/* Routes with Layout */}
+              <Route path="/" element={<Layout />}>
+                {/* Public Routes */}
+                <Route index element={<HomePage />} />
+                <Route path="program-routine" element={<ProgramRoutineView />} />
+                <Route path="teacher-routine" element={<TeacherRoutinePage />} />
               <Route path="excel-demo" element={<ExcelDemo />} />
               <Route path="teacher-excel-demo" element={<TeacherExcelDemo />} />
               <Route path="api-test" element={<TeacherAPITest />} />
@@ -333,8 +349,9 @@ function App() {
             
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
+            </Routes>
+            </Suspense>
+          </Router>
         </AntdApp>
       </ConfigProvider>
     </QueryClientProvider>
