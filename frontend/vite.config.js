@@ -5,6 +5,26 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'antd': ['antd'],
+          'utils': ['axios', 'dayjs']
+        }
+      }
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: { 
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
+    chunkSizeWarningLimit: 1000,
+    sourcemap: false
+  },
   server: {
     port: 7105,
     proxy: {
