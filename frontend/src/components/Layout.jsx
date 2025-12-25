@@ -148,20 +148,20 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/subjects', 
-      icon: <ReadOutlined style={{fontSize: '18px', color: location.pathname === '/subjects' ? '#fff' : '#6b7280'}} />, 
-      label: 'Syllabus',
-      title: collapsed ? 'Syllabus' : undefined,
-      style: {
-        fontWeight: location.pathname === '/subjects' ? 700 : 500,
-        background: location.pathname === '/subjects' ? '#667eea' : 'transparent',
-        color: location.pathname === '/subjects' ? '#fff' : 'inherit',
-        borderRadius: '6px',
-        margin: '0 8px 5px 8px',
-        width: 'calc(100% - 16px)'
-      }
-    }
+    // { 
+    //   key: '/subjects', 
+    //   icon: <ReadOutlined style={{fontSize: '18px', color: location.pathname === '/subjects' ? '#fff' : '#6b7280'}} />, 
+    //   label: 'Syllabus',
+    //   title: collapsed ? 'Syllabus' : undefined,
+    //   style: {
+    //     fontWeight: location.pathname === '/subjects' ? 700 : 500,
+    //     background: location.pathname === '/subjects' ? '#667eea' : 'transparent',
+    //     color: location.pathname === '/subjects' ? '#fff' : 'inherit',
+    //     borderRadius: '6px',
+    //     margin: '0 8px 5px 8px',
+    //     width: 'calc(100% - 16px)'
+    //   }
+    // }
   ];
 
   // Admin-only menu items
@@ -210,34 +210,34 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/programs-manager', 
-      icon: <BookOutlined style={{fontSize: '18px', color: location.pathname === '/programs-manager' ? '#fff' : '#6b7280'}} />, 
-      label: 'Programs',
-      title: collapsed ? 'Programs' : undefined,
-      style: {
-        fontWeight: location.pathname === '/programs-manager' ? 700 : 500,
-        background: location.pathname === '/programs-manager' ? '#667eea' : 'transparent',
-        color: location.pathname === '/programs-manager' ? '#fff' : 'inherit',
-        borderRadius: '6px',
-        margin: '0 8px 5px 8px',
-        width: 'calc(100% - 16px)'
-      }
-    },
-    { 
-      key: '/subjects-manager', 
-      icon: <ReadOutlined style={{fontSize: '18px', color: location.pathname === '/subjects-manager' ? '#fff' : '#6b7280'}} />, 
-      label: 'Subjects',
-      title: collapsed ? 'Subjects' : undefined,
-      style: {
-        fontWeight: location.pathname === '/subjects-manager' ? 700 : 500,
-        background: location.pathname === '/subjects-manager' ? '#667eea' : 'transparent',
-        color: location.pathname === '/subjects-manager' ? '#fff' : 'inherit',
-        borderRadius: '6px',
-        margin: '0 8px 5px 8px',
-        width: 'calc(100% - 16px)'
-      }
-    },
+    // { 
+    //   key: '/programs-manager', 
+    //   icon: <BookOutlined style={{fontSize: '18px', color: location.pathname === '/programs-manager' ? '#fff' : '#6b7280'}} />, 
+    //   label: 'Programs',
+    //   title: collapsed ? 'Programs' : undefined,
+    //   style: {
+    //     fontWeight: location.pathname === '/programs-manager' ? 700 : 500,
+    //     background: location.pathname === '/programs-manager' ? '#667eea' : 'transparent',
+    //     color: location.pathname === '/programs-manager' ? '#fff' : 'inherit',
+    //     borderRadius: '6px',
+    //     margin: '0 8px 5px 8px',
+    //     width: 'calc(100% - 16px)'
+    //   }
+    // },
+    // { 
+    //   key: '/subjects-manager', 
+    //   icon: <ReadOutlined style={{fontSize: '18px', color: location.pathname === '/subjects-manager' ? '#fff' : '#6b7280'}} />, 
+    //   label: 'Subjects',
+    //   title: collapsed ? 'Subjects' : undefined,
+    //   style: {
+    //     fontWeight: location.pathname === '/subjects-manager' ? 700 : 500,
+    //     background: location.pathname === '/subjects-manager' ? '#667eea' : 'transparent',
+    //     color: location.pathname === '/subjects-manager' ? '#fff' : 'inherit',
+    //     borderRadius: '6px',
+    //     margin: '0 8px 5px 8px',
+    //     width: 'calc(100% - 16px)'
+    //   }
+    // },
     { 
       key: '/rooms-manager', 
       icon: <HomeOutlined style={{fontSize: '18px', color: location.pathname === '/rooms-manager' ? '#fff' : '#6b7280'}} />, 
@@ -252,35 +252,35 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/academic-calendar-manager', 
-      icon: <CalendarOutlined style={{fontSize: '18px', color: location.pathname === '/academic-calendar-manager' ? '#fff' : '#6b7280'}} />, 
-      label: 'Academic Calendar',
-      title: collapsed ? 'Academic Calendar' : undefined,
-      style: {
-        fontWeight: location.pathname === '/academic-calendar-manager' ? 700 : 500,
-        background: location.pathname === '/academic-calendar-manager' ? '#667eea' : 'transparent',
-        color: location.pathname === '/academic-calendar-manager' ? '#fff' : 'inherit',
-        borderRadius: '6px',
-        margin: '0 8px 5px 8px',
-        width: 'calc(100% - 16px)'
-      }
-    },
+    // { 
+    //   key: '/academic-calendar-manager', 
+    //   icon: <CalendarOutlined style={{fontSize: '18px', color: location.pathname === '/academic-calendar-manager' ? '#fff' : '#6b7280'}} />, 
+    //   label: 'Academic Calendar',
+    //   title: collapsed ? 'Academic Calendar' : undefined,
+    //   style: {
+    //     fontWeight: location.pathname === '/academic-calendar-manager' ? 700 : 500,
+    //     background: location.pathname === '/academic-calendar-manager' ? '#667eea' : 'transparent',
+    //     color: location.pathname === '/academic-calendar-manager' ? '#fff' : 'inherit',
+    //     borderRadius: '6px',
+    //     margin: '0 8px 5px 8px',
+    //     width: 'calc(100% - 16px)'
+    //   }
+    // },
    
-    { 
-      key: '/department-manager', 
-      icon: <BankOutlined style={{fontSize: '18px', color: location.pathname === '/department-manager' ? '#fff' : '#6b7280'}} />, 
-      label: 'Departments',
-      title: collapsed ? 'Departments' : undefined,
-      style: {
-        fontWeight: location.pathname === '/department-manager' ? 700 : 500,
-        background: location.pathname === '/department-manager' ? '#667eea' : 'transparent',
-        color: location.pathname === '/department-manager' ? '#fff' : 'inherit',
-        borderRadius: '6px',
-        margin: '0 8px 5px 8px',
-        width: 'calc(100% - 16px)'
-      }
-    },
+    // { 
+    //   key: '/department-manager', 
+    //   icon: <BankOutlined style={{fontSize: '18px', color: location.pathname === '/department-manager' ? '#fff' : '#6b7280'}} />, 
+    //   label: 'Departments',
+    //   title: collapsed ? 'Departments' : undefined,
+    //   style: {
+    //     fontWeight: location.pathname === '/department-manager' ? 700 : 500,
+    //     background: location.pathname === '/department-manager' ? '#667eea' : 'transparent',
+    //     color: location.pathname === '/department-manager' ? '#fff' : 'inherit',
+    //     borderRadius: '6px',
+    //     margin: '0 8px 5px 8px',
+    //     width: 'calc(100% - 16px)'
+    //   }
+    // },
     { 
       key: '/timeslots-manager', 
       icon: <BankOutlined style={{fontSize: '18px', color: location.pathname === '/timeslots-manager' ? '#fff' : '#6b7280'}} />, 

@@ -80,8 +80,20 @@ const assignClassValidation = [
     return true;
   }),
   check('teacherIds').custom((value, { req }) => {
-    if (req.body.classType !== 'BREAK' && (!Array.isArray(value) || value.length < 1)) {
-      throw new Error('Teacher IDs must be an array with at least one teacher for non-break classes');
+    if (req.body.classType !== 'BREAK') {
+      // Handle undefined or null - this is an error
+      if (!value) {
+        throw new Error('Teacher IDs are required for non-break classes');
+      }
+      // Convert single value to array if needed
+      if (!Array.isArray(value)) {
+        req.body.teacherIds = [value];
+        return true;
+      }
+      // Check if array has at least one element
+      if (value.length < 1) {
+        throw new Error('At least one teacher must be assigned for non-break classes');
+      }
     }
     return true;
   }),

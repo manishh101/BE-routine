@@ -151,8 +151,11 @@ const validateAssignClassData = async (data) => {
       errors.push('Practical classes should typically be assigned to lab rooms');
     }
 
+    // Allow multiple teachers for all class types, but log a warning for non-lab classes
     if (teachers && teachers.length > 1 && classType !== 'P') {
-      errors.push('Multiple teachers are typically only allowed for practical/lab classes');
+      console.warn(`⚠️ Multiple teachers (${teachers.length}) assigned to non-lab class type "${classType}"`);
+      console.warn('⚠️ This is typically unusual but may be intentional (team teaching, co-teaching, etc.)');
+      // Don't add to errors - allow it but log the warning
     }
     
     // Validate lab group selection for practical classes - only if provided
@@ -464,11 +467,16 @@ exports.assignClass = async (req, res) => {
 
   try {
     const { programCode, semester, section } = req.params;
-    let { dayIndex, slotIndex, subjectId, teacherIds, roomId, classType, labGroup, isAlternativeWeek, alternateGroupData, notes } = req.body;
+    let { dayIndex, slotIndex, subjectId, teacherIds, roomId, classType, labGroup, isAlternativeWeek, alternateGroupData, notes, forceAssign } = req.body;
     
     // Convert data types if needed
     dayIndex = parseInt(dayIndex);
     slotIndex = parseInt(slotIndex);
+    
+    // Parse forceAssign flag (can be string "true" or boolean true)
+    forceAssign = forceAssign === true || forceAssign === 'true';
+    
+    console.log('🚀 assignClass called - forceAssign:', forceAssign);
     
     // Validate basic required fields
     if (isNaN(dayIndex) || isNaN(slotIndex)) {
@@ -631,13 +639,24 @@ exports.assignClass = async (req, res) => {
       const allConflicts = [...advancedConflicts, ...basicConflicts];
       
       if (allConflicts.length > 0) {
-        return res.status(409).json({
-          success: false,
-          message: 'Scheduling conflicts detected',
-          conflicts: allConflicts,
-          conflictCount: allConflicts.length,
-          detectionMethod: 'advanced+basic'
-        });
+        // If forceAssign is true, log the conflicts but allow the assignment
+        if (forceAssign) {
+          console.warn('⚠️ FORCING assignment despite conflicts (forceAssign=true)');
+          console.warn('⚠️ Conflicts being ignored:', allConflicts.length);
+          allConflicts.forEach((conflict, idx) => {
+            console.warn(`  Conflict ${idx + 1}:`, conflict.message || conflict);
+          });
+          // Continue with assignment despite conflicts
+        } else {
+          // Reject with conflict error
+          return res.status(409).json({
+            success: false,
+            message: 'Scheduling conflicts detected',
+            conflicts: allConflicts,
+            conflictCount: allConflicts.length,
+            detectionMethod: 'advanced+basic'
+          });
+        }
       }
     }
 
@@ -892,6 +911,7 @@ exports.assignClassSpanned = async (req, res) => {
       roomId, 
       classType, 
       notes,
+      forceAssign, // Add forceAssign flag
       // Lab group fields for "bothGroups" scenario
       labGroupType,
       groupASubject,
@@ -906,6 +926,9 @@ exports.assignClassSpanned = async (req, res) => {
     
     // Extract labGroup separately as it may need to be reassigned
     let labGroup = req.body.labGroup;
+    
+    // Parse forceAssign flag (can be string "true" or boolean true)
+    const shouldForceAssign = forceAssign === true || forceAssign === 'true';
 
     console.log('📝 Processing spanned class assignment:', {
       programCode,
@@ -920,7 +943,8 @@ exports.assignClassSpanned = async (req, res) => {
       roomId,
       classType,
       labGroupType,
-      labGroup
+      labGroup,
+      forceAssign: shouldForceAssign
     });
 
     // Auto-lookup missing programId and academicYearId if not provided
@@ -1169,16 +1193,18 @@ exports.assignClassSpanned = async (req, res) => {
     }
 
     // 2. Check for collisions for each slotIndex - with semester group awareness
-    for (const slotIndex of actualSlotIndexes) {
-      // Check for teacher conflicts - only within same semester group
-      for (const teacherId of teacherIds) {
-        const teacherConflicts = await RoutineSlot.find({
-          dayIndex,
-          slotIndex,
-          teacherIds: teacherId
-        })
-        .populate('subjectId', 'name')
-        .populate('roomId', 'name');
+    // Skip conflict checks if forceAssign is true
+    if (!shouldForceAssign) {
+      for (const slotIndex of actualSlotIndexes) {
+        // Check for teacher conflicts - only within same semester group
+        for (const teacherId of teacherIds) {
+          const teacherConflicts = await RoutineSlot.find({
+            dayIndex,
+            slotIndex,
+            teacherIds: teacherId
+          })
+          .populate('subjectId', 'name')
+          .populate('roomId', 'name');
 
         for (const teacherConflict of teacherConflicts) {
           // Only consider it a conflict if both semesters are in the same group
@@ -1273,6 +1299,9 @@ exports.assignClassSpanned = async (req, res) => {
           }
         });
       }
+    }
+    } else {
+      console.warn('⚠️ FORCING multi-period assignment despite potential conflicts (forceAssign=true)');
     }
 
     // 3. Get denormalized display data

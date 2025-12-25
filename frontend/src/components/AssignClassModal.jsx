@@ -947,7 +947,9 @@ const AssignClassModal = ({
       const baseClassData = {
         ...values,
         isMultiPeriod,
-        slotIndexes: isMultiPeriod ? selectedSlots : [slotIndex]
+        slotIndexes: isMultiPeriod ? selectedSlots : [slotIndex],
+        // Ensure teacherIds is always an array
+        teacherIds: values.teacherIds ? (Array.isArray(values.teacherIds) ? values.teacherIds : [values.teacherIds]) : []
       };
 
       // Handle elective classes for 7th and 8th semester
@@ -1130,12 +1132,11 @@ const AssignClassModal = ({
           labClassData.isAlternativeWeek = isAlternativeWeek;
           labClassData.useSameConfigForBothGroups = useSameConfigForBothGroups;
           
-          // For backend validation, also set the standard fields when using same config
-          if (useSameConfigForBothGroups) {
-            labClassData.subjectId = groupASubject;
-            labClassData.teacherIds = groupATeachers;
-            labClassData.roomId = groupARoom;
-          }
+          // For backend validation, set the standard fields
+          // Use Group A values as the primary values for validation
+          labClassData.subjectId = groupASubject;
+          labClassData.teacherIds = Array.isArray(groupATeachers) ? groupATeachers : (groupATeachers ? [groupATeachers] : []);
+          labClassData.roomId = groupARoom;
         } else {
           labClassData.isAlternativeWeek = isAlternativeWeek;
         }
@@ -1172,9 +1173,14 @@ const AssignClassModal = ({
             </div>
           ),
           okText: 'Proceed Anyway', cancelText: 'Cancel', okType: 'danger',
-          onOk: () => onSave(baseClassData)
+          onOk: () => {
+            console.log('🔥 Proceeding with conflicts - sending data with forceAssign flag');
+            // Add forceAssign flag to tell backend to ignore conflicts
+            onSave({ ...baseClassData, forceAssign: true });
+          }
         });
       } else {
+        console.log('✅ No conflicts - sending data:', baseClassData);
         onSave(baseClassData);
       }
     } catch (error) {
@@ -1430,17 +1436,6 @@ const AssignClassModal = ({
           
           {currentClassType === 'P' && labGroupType === 'bothGroups' && (
             <>
-              {/* Hidden fields for backend validation when using same configuration */}
-              <Form.Item name="subjectId" style={{ display: 'none' }}>
-                <Input type="hidden" />
-              </Form.Item>
-              <Form.Item name="teacherIds" style={{ display: 'none' }}>
-                <Input type="hidden" />
-              </Form.Item>
-              <Form.Item name="roomId" style={{ display: 'none' }}>
-                <Input type="hidden" />
-              </Form.Item>
-              
               <Form.Item style={{ marginBottom: '12px' }}>
                 <Checkbox 
                   checked={useSameConfigForBothGroups} 
@@ -1832,7 +1827,7 @@ const AssignClassModal = ({
                                     }}
                                   >
                                     {(filteredTeachers && filteredTeachers.length > 0 ? filteredTeachers : teachers || []).map(teacher => (
-                                      <Option key={teacher._id} value={teacher._id} disabled={!teacher.isAvailable && teacher.isAvailable !== undefined}>
+                                      <Option key={teacher._id} value={teacher._id}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ flex: 1 }}>
@@ -1889,7 +1884,7 @@ const AssignClassModal = ({
                                     }}
                                   >
                                     {availableRooms.map(room => (
-                                      <Option key={room._id} value={room._id} disabled={room.isAvailable === false}>
+                                      <Option key={room._id} value={room._id}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div style={{ flex: 1 }}>
@@ -2001,7 +1996,7 @@ const AssignClassModal = ({
                     notFoundContent={teacherSearchText ? "No teachers found matching your search" : "No teachers available"}
                   >
                     {filteredTeachersForSearch.map(teacher => (
-                      <Option key={teacher._id} value={teacher._id} disabled={currentClassType !== 'P' && !teacher.isAvailable}>
+                      <Option key={teacher._id} value={teacher._id}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ flex: 1 }}>
@@ -2050,7 +2045,7 @@ const AssignClassModal = ({
                     notFoundContent={roomSearchText ? "No rooms found matching your search" : "No rooms available"}
                   >
                     {filteredRoomsForSearch.map(room => (
-                      <Option key={room._id} value={room._id} disabled={room.isAvailable === false}>
+                      <Option key={room._id} value={room._id}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ flex: 1 }}>

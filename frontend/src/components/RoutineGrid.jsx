@@ -1505,6 +1505,9 @@ const RoutineGrid = ({
 
   const handleSaveClass = async (classData) => {
     try {
+      console.log('📥 handleSaveClass received data:', classData);
+      console.log('📥 teacherIds type and value:', typeof classData.teacherIds, classData.teacherIds);
+      
       // Check if this is an elective class that was already saved
       if (classData.isElectiveClass && classData.crossSectionScheduled) {
         safeMessage.success('Elective class scheduled successfully for both sections!');
@@ -1525,11 +1528,33 @@ const RoutineGrid = ({
       // Single-period class assignment - use slot ID directly
       const slotIndex = selectedSlot.slotIndex;
       
+      // Ensure teacherIds is always an array (even if empty for BREAK)
+      let normalizedTeacherIds;
+      if (classData.classType === 'BREAK') {
+        normalizedTeacherIds = [];
+      } else if (classData.teacherIds) {
+        normalizedTeacherIds = Array.isArray(classData.teacherIds) ? classData.teacherIds : [classData.teacherIds];
+      } else {
+        // teacherIds is required but missing for non-BREAK class
+        console.error('❌ Missing teacherIds for non-BREAK class:', classData);
+        safeMessage.error('Teacher selection is required. Please select at least one teacher.');
+        return;
+      }
+      
+      if (classData.classType !== 'BREAK' && normalizedTeacherIds.length === 0) {
+        console.error('❌ Empty teacherIds array for non-BREAK class:', classData);
+        safeMessage.error('Teacher selection is required. Please select at least one teacher.');
+        return;
+      }
+      
       const requestData = {
         ...classData,
+        teacherIds: normalizedTeacherIds,
         dayIndex: selectedSlot.dayIndex,
         slotIndex: parseInt(slotIndex) // Convert to integer for backend
       };
+      
+      console.log('📤 Sending request data to API:', requestData);
       
       await routinesAPI.assignClass(programCode, semester, section, requestData);
       safeMessage.success('Class assigned successfully!');
@@ -1542,9 +1567,26 @@ const RoutineGrid = ({
       
     } catch (error) {
       console.error('❌ Single-period save error:', error);
+      console.error('❌ Error response data:', error.response?.data);
+      console.error('❌ Error response status:', error.response?.status);
+      
+      // Log the full errors array to see validation details
+      if (error.response?.data?.errors) {
+        console.error('❌ Validation errors:', error.response.data.errors);
+        error.response.data.errors.forEach((err, idx) => {
+          console.error(`  Error ${idx + 1}:`, err);
+        });
+      }
       
       if (error.response?.status === 409) {
         safeMessage.error('Schedule conflict detected. Please check teacher and room availability.');
+      } else if (error.response?.status === 400) {
+        // Get the first error message from the errors array
+        const errors = error.response?.data?.errors || [];
+        const firstError = errors[0];
+        const errorMsg = firstError?.msg || firstError?.message || error.response?.data?.message || 'Validation failed';
+        console.error('❌ 400 Error message:', errorMsg);
+        safeMessage.error(`Validation error: ${errorMsg}`);
       } else {
         safeMessage.error(error.message || 'Failed to assign class. Please try again.');
       }
@@ -1553,6 +1595,8 @@ const RoutineGrid = ({
 
   const handleSaveSpannedClass = async (classData, slotIndexes) => {
     try {
+      console.log('📥 handleSaveSpannedClass received data:', classData);
+      
       // Convert slot IDs to integers for backend
       const validIndices = slotIndexes.map(slotId => {
         const slotIndex = parseInt(slotId);
@@ -1567,9 +1611,29 @@ const RoutineGrid = ({
         converted: validIndices
       });
 
+      // Ensure teacherIds is always an array
+      let normalizedTeacherIds;
+      if (classData.classType === 'BREAK') {
+        normalizedTeacherIds = [];
+      } else if (classData.teacherIds) {
+        normalizedTeacherIds = Array.isArray(classData.teacherIds) ? classData.teacherIds : [classData.teacherIds];
+      } else {
+        // teacherIds is required but missing for non-BREAK class
+        console.error('❌ Missing teacherIds for non-BREAK multi-period class:', classData);
+        safeMessage.error('Teacher selection is required. Please select at least one teacher.');
+        return;
+      }
+      
+      if (classData.classType !== 'BREAK' && normalizedTeacherIds.length === 0) {
+        console.error('❌ Empty teacherIds array for non-BREAK multi-period class:', classData);
+        safeMessage.error('Teacher selection is required. Please select at least one teacher.');
+        return;
+      }
+
       // Prepare data for backend
       const requestData = {
         ...classData,
+        teacherIds: normalizedTeacherIds,
         dayIndex: selectedSlot.dayIndex,
         slotIndexes: validIndices,
         programCode,
