@@ -122,7 +122,7 @@ const calculateRoomUtilization = async (sessionId) => {
 const calculateTeacherWorkload = async (sessionId) => {
   try {
     // Get all teachers
-    const teachers = await Teacher.find();
+    const teachers = await Teacher.find({ isActive: true });
     
     // Get all routine slots for this session
     const routineSlots = await RoutineSlot.find({ academicSessionId: sessionId });

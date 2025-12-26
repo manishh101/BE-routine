@@ -404,7 +404,7 @@ routineSlotSchema.pre('save', async function(next) {
     
     // Get teacher names
     if (this.teacherIds && this.teacherIds.length > 0) {
-      const teachers = await Teacher.find({ _id: { $in: this.teacherIds } });
+      const teachers = await Teacher.find({ _id: { $in: this.teacherIds }, isActive: true });
       this.display.teacherNames = teachers.map(t => t.shortName);
       this.teacherShortNames_display = teachers.map(t => t.shortName); // Legacy field
     }

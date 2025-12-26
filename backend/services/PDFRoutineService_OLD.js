@@ -284,7 +284,7 @@ class PDFRoutineService {
 
       // Get teacher details
       const Teacher = require('../models/Teacher');
-      const teachers = await Teacher.find({ _id: { $in: teacherIds } }).sort({ fullName: 1 });
+      const teachers = await Teacher.find({ _id: { $in: teacherIds }, isActive: true }).sort({ fullName: 1 });
 
       if (!teachers || teachers.length === 0) {
         console.log('No teacher details found');

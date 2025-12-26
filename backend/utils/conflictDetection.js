@@ -229,7 +229,7 @@ async function getAvailableTeachers(dayIndex, slotIndex, currentSemester = null,
     const Teacher = require('../models/Teacher');
     
     // Get all teachers
-    const allTeachers = await Teacher.find({}, '_id');
+    const allTeachers = await Teacher.find({ isActive: true }, '_id');
     
     // Get busy teachers at this time slot
     const busySlots = await RoutineSlot.find({

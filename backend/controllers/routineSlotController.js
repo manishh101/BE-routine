@@ -364,7 +364,7 @@ exports.createElectiveClass = async (req, res) => {
     
     const validationPromises = [
       Subject.find({ _id: { $in: subjectIds } }),
-      Teacher.find({ _id: { $in: teacherIds } })
+      Teacher.find({ _id: { $in: teacherIds }, isActive: true })
     ];
     
     // Only validate rooms if room IDs are provided

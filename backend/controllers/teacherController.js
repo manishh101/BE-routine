@@ -180,7 +180,12 @@ exports.getTeachers = async (req, res) => {
     const filter = {};
     
     if (departmentId) filter.departmentId = departmentId;
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    // Default to showing only active teachers unless explicitly requesting inactive
+    if (isActive !== undefined) {
+      filter.isActive = isActive === 'true';
+    } else {
+      filter.isActive = true; // Default to active teachers only
+    }
     if (designation) filter.designation = designation;
     if (isFullTime !== undefined) filter.isFullTime = isFullTime === 'true';
 
@@ -286,19 +291,6 @@ exports.deleteTeacher = async (req, res) => {
       return res.status(404).json({ msg: 'Teacher not found' });
     }
 
-    // Check if teacher is referenced in active routine slots
-    const RoutineSlot = require('../models/RoutineSlot');
-    const activeSlots = await RoutineSlot.countDocuments({
-      teacherIds: teacher._id,
-      isActive: true
-    });
-
-    if (activeSlots > 0) {
-      return res.status(400).json({ 
-        msg: `Cannot delete teacher. They are assigned to ${activeSlots} active routine slots.` 
-      });
-    }
-
     // Check if teacher is a department head
     const Department = require('../models/Department');
     const isDeptHead = await Department.findOne({ headId: teacher._id });
@@ -309,11 +301,36 @@ exports.deleteTeacher = async (req, res) => {
       });
     }
 
-    // Soft delete
+    // Remove teacher from all assignments
+    const RoutineSlot = require('../models/RoutineSlot');
+    const LabGroup = require('../models/LabGroup');
+    const ElectiveGroup = require('../models/ElectiveGroup');
+
+    // Remove from routine slots
+    await RoutineSlot.updateMany(
+      { teacherIds: teacher._id },
+      { $pull: { teacherIds: teacher._id } }
+    );
+
+    // Remove from lab groups
+    await LabGroup.updateMany(
+      { teacherId: teacher._id },
+      { $unset: { teacherId: "" } }
+    );
+
+    // Remove from elective groups
+    await ElectiveGroup.updateMany(
+      { teacherId: teacher._id },
+      { $unset: { teacherId: "" } }
+    );
+
+    // Soft delete the teacher
     teacher.isActive = false;
     await teacher.save();
 
-    res.json({ msg: 'Teacher deactivated successfully' });
+    res.json({ 
+      msg: 'Teacher deactivated successfully and removed from all assignments' 
+    });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
@@ -383,27 +400,14 @@ exports.deleteTeachersBulk = async (req, res) => {
     }
 
     // Check for constraints before deletion
-    const constraintErrors = [];
     const deleteableTeachers = [];
     const skippedTeachers = [];
 
     for (const teacher of existingTeachers) {
-      // Check if teacher is referenced in active routine slots
-      const activeSlots = await RoutineSlot.countDocuments({
-        teacherIds: teacher._id,
-        isActive: true
-      });
-
       // Check if teacher is a department head
       const isDeptHead = await Department.findOne({ headId: teacher._id });
 
-      if (activeSlots > 0) {
-        skippedTeachers.push({
-          id: teacher._id,
-          name: teacher.fullName,
-          reason: `Assigned to ${activeSlots} active routine slots`
-        });
-      } else if (isDeptHead) {
+      if (isDeptHead) {
         skippedTeachers.push({
           id: teacher._id,
           name: teacher.fullName,
@@ -414,11 +418,34 @@ exports.deleteTeachersBulk = async (req, res) => {
       }
     }
 
-    // Perform soft delete (set isActive to false) for deleteable teachers
+    // Perform cascade removal and soft delete for deleteable teachers
     const deleteableIds = deleteableTeachers.map(t => t._id);
     let deleteResult = { modifiedCount: 0 };
     
     if (deleteableIds.length > 0) {
+      // Remove teachers from all assignments
+      const LabGroup = require('../models/LabGroup');
+      const ElectiveGroup = require('../models/ElectiveGroup');
+
+      // Remove from routine slots (pull from teacherIds array)
+      await RoutineSlot.updateMany(
+        { teacherIds: { $in: deleteableIds } },
+        { $pull: { teacherIds: { $in: deleteableIds } } }
+      );
+
+      // Remove from lab groups (unset teacherId field)
+      await LabGroup.updateMany(
+        { teacherId: { $in: deleteableIds } },
+        { $unset: { teacherId: "" } }
+      );
+
+      // Remove from elective groups (unset teacherId field)
+      await ElectiveGroup.updateMany(
+        { teacherId: { $in: deleteableIds } },
+        { $unset: { teacherId: "" } }
+      );
+
+      // Perform soft delete (set isActive to false)
       deleteResult = await Teacher.updateMany(
         { _id: { $in: deleteableIds } },
         { $set: { isActive: false } }
@@ -427,7 +454,7 @@ exports.deleteTeachersBulk = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Successfully deactivated ${deleteResult.modifiedCount} teachers, ${skippedTeachers.length} skipped due to constraints`,
+      message: `Successfully deactivated ${deleteResult.modifiedCount} teachers and removed from all assignments, ${skippedTeachers.length} skipped due to constraints`,
       deactivatedCount: deleteResult.modifiedCount,
       deactivatedTeachers: deleteableTeachers.map(t => ({ 
         id: t._id, 
@@ -494,22 +521,10 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
     const skippedTeachers = [];
 
     for (const teacher of teachersInDept) {
-      // Check if teacher is referenced in active routine slots
-      const activeSlots = await RoutineSlot.countDocuments({
-        teacherIds: teacher._id,
-        isActive: true
-      });
-
       // Check if teacher is a department head
       const isDeptHead = await Department.findOne({ headId: teacher._id });
 
-      if (activeSlots > 0) {
-        skippedTeachers.push({
-          id: teacher._id,
-          name: teacher.fullName,
-          reason: `Assigned to ${activeSlots} active routine slots`
-        });
-      } else if (isDeptHead) {
+      if (isDeptHead) {
         skippedTeachers.push({
           id: teacher._id,
           name: teacher.fullName,
@@ -520,25 +535,48 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
       }
     }
 
-    // Perform soft delete for deleteable teachers
-    let deactivatedCount = 0;
-    if (deleteableTeachers.length > 0) {
-      const deleteableIds = deleteableTeachers.map(t => t._id);
-      const updateResult = await Teacher.updateMany(
+    // Perform cascade removal and soft delete for deleteable teachers
+    const deleteableIds = deleteableTeachers.map(t => t._id);
+    let deleteResult = { modifiedCount: 0 };
+    
+    if (deleteableIds.length > 0) {
+      // Remove teachers from all assignments
+      const LabGroup = require('../models/LabGroup');
+      const ElectiveGroup = require('../models/ElectiveGroup');
+
+      // Remove from routine slots (pull from teacherIds array)
+      await RoutineSlot.updateMany(
+        { teacherIds: { $in: deleteableIds } },
+        { $pull: { teacherIds: { $in: deleteableIds } } }
+      );
+
+      // Remove from lab groups (unset teacherId field)
+      await LabGroup.updateMany(
+        { teacherId: { $in: deleteableIds } },
+        { $unset: { teacherId: "" } }
+      );
+
+      // Remove from elective groups (unset teacherId field)
+      await ElectiveGroup.updateMany(
+        { teacherId: { $in: deleteableIds } },
+        { $unset: { teacherId: "" } }
+      );
+
+      // Perform soft delete (set isActive to false)
+      deleteResult = await Teacher.updateMany(
         { _id: { $in: deleteableIds } },
         { $set: { isActive: false } }
       );
-      deactivatedCount = updateResult.modifiedCount;
     }
 
     res.status(200).json({
       success: true,
-      message: `Department cleanup completed: ${deactivatedCount} teachers deactivated, ${skippedTeachers.length} skipped due to constraints`,
+      message: `Successfully deactivated ${deleteResult.modifiedCount} teachers and removed from all assignments, ${skippedTeachers.length} skipped due to constraints`,
       departmentId: departmentId,
       departmentName: department.name,
-      deactivatedCount: deactivatedCount,
+      deactivatedCount: deleteResult.modifiedCount,
       skippedCount: skippedTeachers.length,
-      totalProcessed: deactivatedCount + skippedTeachers.length,
+      totalProcessed: deleteResult.modifiedCount + skippedTeachers.length,
       deactivatedTeachers: deleteableTeachers.map(t => ({
         id: t._id,
         name: t.fullName,
@@ -918,9 +956,10 @@ exports.findMeetingSlots = async (req, res) => {
       });
     }
 
-    // Validate teachers exist
+    // Validate teachers exist and are active
     const teachers = await Teacher.find({
-      _id: { $in: teacherIds }
+      _id: { $in: teacherIds },
+      isActive: true
     }).select('_id fullName shortName email');
 
     if (teachers.length !== teacherIds.length) {

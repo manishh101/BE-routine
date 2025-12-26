@@ -120,7 +120,7 @@ const validateAssignClassData = async (data) => {
     const [program, subject, teachers, room, timeSlot] = await Promise.all([
       Program.findOne({ code: programCode.toUpperCase() }),
       Subject.findById(subjectId),
-      Teacher.find({ _id: { $in: teacherIds } }),
+      Teacher.find({ _id: { $in: teacherIds }, isActive: true }),
       Room.findById(roomId),
       TimeSlot.findOne({ _id: slotIndex })
     ]);
@@ -676,7 +676,7 @@ exports.assignClass = async (req, res) => {
       // For regular classes, get all reference data
       [subject, teachers, room, timeSlot, program] = await Promise.all([
         Subject.findById(subjectId),
-        Teacher.find({ _id: { $in: teacherIds } }),
+        Teacher.find({ _id: { $in: teacherIds }, isActive: true }),
         Room.findById(roomId),
         TimeSlot.findOne({ _id: slotIndex }),
         Program.findOne({ code: programCode.toUpperCase() })
@@ -1052,7 +1052,7 @@ exports.assignClassSpanned = async (req, res) => {
         
         // Get subject, teachers, and room data for this group
         const subject = await Subject.findById(groupAssignment.subjectId);
-        const teachers = await Teacher.find({ _id: { $in: groupAssignment.teacherIds } });
+        const teachers = await Teacher.find({ _id: { $in: groupAssignment.teacherIds }, isActive: true });
         const room = await Room.findById(groupAssignment.roomId);
         
         if (!subject || teachers.length !== groupAssignment.teacherIds.length || !room) {
@@ -1306,7 +1306,7 @@ exports.assignClassSpanned = async (req, res) => {
 
     // 3. Get denormalized display data
     const subject = await Subject.findById(subjectId);
-    const teachers = await Teacher.find({ _id: { $in: teacherIds } });
+    const teachers = await Teacher.find({ _id: { $in: teacherIds }, isActive: true });
     const room = await Room.findById(roomId);
 
     if (!subject || teachers.length !== teacherIds.length || !room) {
@@ -2510,7 +2510,7 @@ exports.scheduleElectiveClass = async (req, res) => {
 
     // Get subject and validation data
     const subject = await Subject.findById(subjectId);
-    const teachers = await Teacher.find({ _id: { $in: teacherIds } });
+    const teachers = await Teacher.find({ _id: { $in: teacherIds }, isActive: true });
     const room = await Room.findById(roomId);
     const program = await Program.findById(programId);
 
@@ -2756,7 +2756,7 @@ exports.scheduleElectiveClassSpanned = async (req, res) => {
 
     // Get subject and validation data
     const subject = await Subject.findById(subjectId);
-    const teachers = await Teacher.find({ _id: { $in: teacherIds } });
+    const teachers = await Teacher.find({ _id: { $in: teacherIds }, isActive: true });
     const room = await Room.findById(roomId);
     const program = await Program.findById(programId);
 
