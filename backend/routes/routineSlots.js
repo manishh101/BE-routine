@@ -93,7 +93,7 @@ router.get('/:id', protect, routineSlotController.getRoutineSlotById);
 router.put('/:id', [protect, authorize('admin'), ...routineSlotValidation], routineSlotController.updateRoutineSlot);
 
 // @route   DELETE /api/routine-slots/:id
-// @desc    Delete routine slot (soft delete)
+// @desc    Delete routine slot (hard delete - completely removes from database)
 // @access  Private/Admin
 router.delete('/:id', [protect, authorize('admin')], routineSlotController.deleteRoutineSlot);
 

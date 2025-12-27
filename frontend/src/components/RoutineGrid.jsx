@@ -908,6 +908,8 @@ const RoutineGrid = ({
     
     // Get existing class data using the utility function
     const existingClassData = getClassData(routineGridData, dayIndex, normalizedSlotId);
+    console.log('🔍 Existing class data for edit:', existingClassData);
+    console.log('🔍 Day:', dayIndex, 'Slot:', normalizedSlotId);
     setExistingClass(existingClassData || null);
     setAssignModalVisible(true);
   };
@@ -1506,6 +1508,7 @@ const RoutineGrid = ({
   const handleSaveClass = async (classData) => {
     try {
       console.log('📥 handleSaveClass received data:', classData);
+      console.log('📥 existingClass:', existingClass);
       console.log('📥 teacherIds type and value:', typeof classData.teacherIds, classData.teacherIds);
       
       // Check if this is an elective class that was already saved
@@ -1518,6 +1521,31 @@ const RoutineGrid = ({
         
         onModalClose();
         return;
+      }
+      
+      // SCENARIO DETECTION: Determine what type of operation this is
+      const isChangingToMulti = existingClass && !existingClass.spanId && classData.isMultiPeriod;
+      const isChangingToSingle = existingClass && existingClass.spanId && !classData.isMultiPeriod;
+      
+      console.log('🔍 Scenario detection:', {
+        hasExistingClass: !!existingClass,
+        existingIsMulti: !!existingClass?.spanId,
+        newIsMulti: classData.isMultiPeriod,
+        isChangingToMulti,
+        isChangingToSingle
+      });
+      
+      // Handle changing from multi-period to single-period
+      if (isChangingToSingle) {
+        console.log('🔄 Changing from multi-period to single-period - will delete old multi slots');
+        try {
+          // Delete the entire span group first
+          await routinesAPI.clearSpanGroup(programCode, semester, section, existingClass.spanId);
+          console.log('✅ Deleted old multi-period slots');
+        } catch (deleteError) {
+          console.error('⚠️  Error deleting old multi slots:', deleteError);
+          // Continue anyway to create the new single slot
+        }
       }
       
       // Check if this is a multi-period class
@@ -1551,18 +1579,63 @@ const RoutineGrid = ({
         ...classData,
         teacherIds: normalizedTeacherIds,
         dayIndex: selectedSlot.dayIndex,
-        slotIndex: parseInt(slotIndex) // Convert to integer for backend
+        slotIndex: parseInt(slotIndex), // Convert to integer for backend
+        // Pass existing slot ID if updating (not changing from multi)
+        ...(existingClass && !isChangingToSingle && existingClass._id && {
+          existingSlotId: existingClass._id
+        })
       };
       
       console.log('📤 Sending request data to API:', requestData);
+      console.log('📤 Is this an update?', existingClass ? 'YES - Updating existing class' : 'NO - Creating new class');
+      if (existingClass) {
+        console.log('📤 Existing class details:', {
+          subjectId: existingClass.subjectId,
+          teacherIds: existingClass.teacherIds,
+          roomId: existingClass.roomId,
+          classType: existingClass.classType
+        });
+      }
       
-      await routinesAPI.assignClass(programCode, semester, section, requestData);
-      safeMessage.success('Class assigned successfully!');
+      const response = await routinesAPI.assignClass(programCode, semester, section, requestData);
       
-      // Refresh data
-      await refetchRoutine();
+      console.log('✅ Backend response:', response.data);
+      console.log('✅ Operation type from backend:', response.data?.metadata?.operation);
+      
+      // Show appropriate success message based on operation
+      const operationType = response.data?.metadata?.operation || (existingClass ? 'update' : 'create');
+      const successMessage = operationType === 'update' 
+        ? '✅ Class updated successfully! Changes have been saved.' 
+        : '✅ Class assigned successfully!';
+      
+      safeMessage.success({
+        content: successMessage,
+        duration: 3
+      });
+      
+      // Force complete data refresh with multiple strategies
+      console.log('🔄 Forcing complete data refresh...');
+      
+      // Strategy 1: Remove cached data entirely to force fresh fetch
+      queryClient.removeQueries(['routine', programCode, semester, section]);
+      
+      // Strategy 2: Explicitly refetch
+      const refetchResult = await refetchRoutine();
+      console.log('🔄 Refetch result:', refetchResult ? 'Success' : 'Failed');
+      
+      // Strategy 3: Invalidate queries to ensure any other components refresh
       queryClient.invalidateQueries(['routine', programCode, semester, section]);
       
+      // Strategy 4: Wait a moment and refetch again to ensure backend has fully processed
+      setTimeout(async () => {
+        console.log('🔄 Second refresh to ensure data consistency...');
+        await refetchRoutine();
+        queryClient.invalidateQueries(['routine', programCode, semester, section]);
+      }, 300);
+      
+      console.log('✅ Data refresh complete - modal will close');
+      
+      // Close modal after successful save
       onModalClose();
       
     } catch (error) {
@@ -1578,6 +1651,25 @@ const RoutineGrid = ({
         });
       }
       
+      // Enhanced error message with more context
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error ||
+                          error.message || 
+                          'Failed to save class';
+      
+      safeMessage.error({
+        content: (
+          <div>
+            <div>❌ {existingClass ? 'Failed to update class' : 'Failed to assign class'}</div>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              {errorMessage}
+            </div>
+          </div>
+        ),
+        duration: 6
+      });
+      
+      // Additional specific error handling
       if (error.response?.status === 409) {
         safeMessage.error('Schedule conflict detected. Please check teacher and room availability.');
       } else if (error.response?.status === 400) {
@@ -1587,8 +1679,6 @@ const RoutineGrid = ({
         const errorMsg = firstError?.msg || firstError?.message || error.response?.data?.message || 'Validation failed';
         console.error('❌ 400 Error message:', errorMsg);
         safeMessage.error(`Validation error: ${errorMsg}`);
-      } else {
-        safeMessage.error(error.message || 'Failed to assign class. Please try again.');
       }
     }
   };
@@ -1596,6 +1686,7 @@ const RoutineGrid = ({
   const handleSaveSpannedClass = async (classData, slotIndexes) => {
     try {
       console.log('📥 handleSaveSpannedClass received data:', classData);
+      console.log('📥 existingClass for multi-period:', existingClass);
       
       // Convert slot IDs to integers for backend
       const validIndices = slotIndexes.map(slotId => {
@@ -1630,6 +1721,41 @@ const RoutineGrid = ({
         return;
       }
 
+      // SCENARIO DETECTION for multi-period
+      const isChangingFromSingle = existingClass && !existingClass.spanId;
+      const isUpdatingMulti = existingClass && existingClass.spanId;
+      
+      console.log('🔍 Multi-period scenario detection:', {
+        hasExistingClass: !!existingClass,
+        hasSpanId: !!existingClass?.spanId,
+        spanId: existingClass?.spanId,
+        isChangingFromSingle,
+        isUpdatingMulti
+      });
+      
+      // If changing from single to multi, delete the old single slot first
+      if (isChangingFromSingle && existingClass._id) {
+        console.log('🔄 Changing from single-period to multi-period - will delete old single slot');
+        try {
+          await routinesAPI.deleteRoutineSlot(existingClass._id);
+          console.log('✅ Deleted old single-period slot');
+        } catch (deleteError) {
+          console.error('⚠️  Error deleting old single slot:', deleteError);
+          // Continue anyway to create the new multi slots
+        }
+      }
+      
+      // Check if this is an UPDATE of an existing multi-period class
+      const isUpdate = isUpdatingMulti;
+      
+      console.log('🔍 Multi-period scenario detection:', {
+        hasExistingClass: !!existingClass,
+        hasSpanId: !!existingClass?.spanId,
+        spanId: existingClass?.spanId,
+        isChangingFromSingle,
+        isUpdatingMulti
+      });
+      
       // Prepare data for backend
       const requestData = {
         ...classData,
@@ -1638,10 +1764,17 @@ const RoutineGrid = ({
         slotIndexes: validIndices,
         programCode,
         semester,
-        section
+        section,
+        // If updating, pass spanId so backend can exclude these slots from conflict detection
+        ...(isUpdate && { 
+          spanId: existingClass.spanId,
+          isUpdate: true 
+        })
       };
 
       console.log('📤 Sending to backend:', requestData);
+      console.log('📤 Operation type:', isUpdate ? 'UPDATE existing multi' : isChangingFromSingle ? 'CREATE multi (from single)' : 'CREATE new multi');
+      console.log('📤 spanId:', existingClass?.spanId);
 
       // Send to backend
       await routinesAPI.assignClassSpanned(requestData);

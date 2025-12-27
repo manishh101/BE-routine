@@ -327,6 +327,19 @@ exports.getRoutine = async (req, res) => {
 
     console.log(`Found ${routineSlots.length} routine slots for ${programCode}-${semester}-${section}`);
     
+    // Build a map of spanId to all slot indexes for multi-period classes
+    const spanIdToSlotIndexes = new Map();
+    routineSlots.forEach(slot => {
+      if (slot.spanId) {
+        if (!spanIdToSlotIndexes.has(slot.spanId.toString())) {
+          spanIdToSlotIndexes.set(slot.spanId.toString(), []);
+        }
+        spanIdToSlotIndexes.get(slot.spanId.toString()).push(slot.slotIndex);
+      }
+    });
+    
+    console.log(`📊 Multi-period spans found: ${spanIdToSlotIndexes.size}`);
+    
     // Debug: Log slots with lab groups
     const multiGroupSlots = routineSlots.filter(slot => slot.labGroup && ['A', 'B', 'C', 'D'].includes(slot.labGroup));
     if (multiGroupSlots.length > 0) {
@@ -387,6 +400,9 @@ exports.getRoutine = async (req, res) => {
         timeSlot_display: slot.timeSlot_display,
         spanId: slot.spanId,
         spanMaster: slot.spanMaster,
+        // Include all slot indexes for multi-period classes
+        slotIndexes: slot.spanId ? spanIdToSlotIndexes.get(slot.spanId.toString()) : [slot.slotIndex],
+        isMultiPeriod: slot.spanId ? spanIdToSlotIndexes.get(slot.spanId.toString())?.length > 1 : false,
         labGroup: slot.labGroup,  // Include lab group information
         isAlternativeWeek: slot.isAlternativeWeek,  // Include alternative weeks flag
         alternateGroupData: slot.alternateGroupData,  // Include alternate group configuration
@@ -764,16 +780,39 @@ exports.assignClass = async (req, res) => {
     try {
       if (existingSlot) {
         // Update existing slot
-        console.log('Updating existing slot:', existingSlot._id);
+        console.log('✏️  UPDATING EXISTING SLOT:', existingSlot._id);
+        console.log('✏️  Old values:', {
+          subjectId: existingSlot.subjectId,
+          teacherIds: existingSlot.teacherIds,
+          roomId: existingSlot.roomId,
+          classType: existingSlot.classType
+        });
+        console.log('✏️  New values:', {
+          subjectId: slotData.subjectId,
+          teacherIds: slotData.teacherIds,
+          roomId: slotData.roomId,
+          classType: slotData.classType
+        });
+        
         routineSlot = await RoutineSlot.findByIdAndUpdate(
           existingSlot._id,
           slotData,
           { new: true, runValidators: true }
         );
+        
+        console.log('✅ SLOT UPDATED SUCCESSFULLY:', routineSlot._id);
+        console.log('✅ Updated slot data:', {
+          subjectId: routineSlot.subjectId,
+          teacherIds: routineSlot.teacherIds,
+          roomId: routineSlot.roomId,
+          classType: routineSlot.classType,
+          subjectName: routineSlot.subjectName_display
+        });
       } else {
         // Create new slot
-        console.log('Creating new slot');
+        console.log('➕ CREATING NEW SLOT');
         routineSlot = await RoutineSlot.create(slotData);
+        console.log('✅ SLOT CREATED SUCCESSFULLY:', routineSlot._id);
       }
     } catch (dbError) {
       console.error('❌ Database error when saving slot:', dbError.message);
@@ -912,6 +951,8 @@ exports.assignClassSpanned = async (req, res) => {
       classType, 
       notes,
       forceAssign, // Add forceAssign flag
+      spanId, // Add spanId for update detection
+      isUpdate, // Add isUpdate flag
       // Lab group fields for "bothGroups" scenario
       labGroupType,
       groupASubject,
@@ -929,6 +970,22 @@ exports.assignClassSpanned = async (req, res) => {
     
     // Parse forceAssign flag (can be string "true" or boolean true)
     const shouldForceAssign = forceAssign === true || forceAssign === 'true';
+    
+    // Check if this is an update operation
+    const isUpdateOperation = isUpdate === true && spanId;
+    
+    // Convert spanId to ObjectId if it's a string for proper MongoDB comparison
+    let spanIdObjectId = null;
+    if (isUpdateOperation && spanId) {
+      try {
+        spanIdObjectId = mongoose.Types.ObjectId.isValid(spanId) 
+          ? new mongoose.Types.ObjectId(spanId) 
+          : spanId;
+      } catch (err) {
+        console.warn('⚠️  Could not convert spanId to ObjectId:', err);
+        spanIdObjectId = spanId;
+      }
+    }
 
     console.log('📝 Processing spanned class assignment:', {
       programCode,
@@ -944,7 +1001,9 @@ exports.assignClassSpanned = async (req, res) => {
       classType,
       labGroupType,
       labGroup,
-      forceAssign: shouldForceAssign
+      forceAssign: shouldForceAssign,
+      isUpdate: isUpdateOperation,
+      spanId: spanId || 'N/A'
     });
 
     // Auto-lookup missing programId and academicYearId if not provided
@@ -1195,16 +1254,35 @@ exports.assignClassSpanned = async (req, res) => {
     // 2. Check for collisions for each slotIndex - with semester group awareness
     // Skip conflict checks if forceAssign is true
     if (!shouldForceAssign) {
+      console.log('🔍 Checking conflicts for multi-period class...');
+      if (isUpdateOperation) {
+        console.log('🔄 UPDATE mode - will exclude slots with spanId:', spanIdObjectId);
+        console.log('🔄 spanId type:', typeof spanIdObjectId, 'value:', spanIdObjectId);
+      }
+      
       for (const slotIndex of actualSlotIndexes) {
         // Check for teacher conflicts - only within same semester group
         for (const teacherId of teacherIds) {
-          const teacherConflicts = await RoutineSlot.find({
+          const conflictQuery = {
             dayIndex,
             slotIndex,
             teacherIds: teacherId
-          })
+          };
+          
+          // If updating, exclude slots with the same spanId
+          if (isUpdateOperation && spanIdObjectId) {
+            conflictQuery.spanId = { $ne: spanIdObjectId };
+            console.log('🔍 Conflict query with spanId exclusion:', JSON.stringify(conflictQuery));
+          }
+          
+          const teacherConflicts = await RoutineSlot.find(conflictQuery)
           .populate('subjectId', 'name')
           .populate('roomId', 'name');
+          
+        console.log(`🔍 Found ${teacherConflicts.length} potential teacher conflicts for slot ${slotIndex}`);
+        if (teacherConflicts.length > 0 && isUpdateOperation) {
+          console.log('🔍 Conflicts spanIds:', teacherConflicts.map(c => ({ spanId: c.spanId?.toString(), id: c._id.toString() })));
+        }
 
         for (const teacherConflict of teacherConflicts) {
           // Only consider it a conflict if both semesters are in the same group
@@ -1238,11 +1316,19 @@ exports.assignClassSpanned = async (req, res) => {
       }
 
       // Check for room conflict - only within same semester group
-      const roomConflicts = await RoutineSlot.find({
+      const roomConflictQuery = {
         dayIndex,
         slotIndex,
         roomId
-      }).populate('subjectId', 'name');
+      };
+      
+      // If updating, exclude slots with the same spanId
+      if (isUpdateOperation && spanIdObjectId) {
+        roomConflictQuery.spanId = { $ne: spanIdObjectId };
+      }
+      
+      const roomConflicts = await RoutineSlot.find(roomConflictQuery)
+        .populate('subjectId', 'name');
 
       for (const roomConflict of roomConflicts) {
         // Only consider it a conflict if both semesters are in the same group
@@ -1259,7 +1345,7 @@ exports.assignClassSpanned = async (req, res) => {
               roomName: room?.name,
               slotIndex,
               semesterGroup: getSemesterGroupName(semester),
-              conflictReason: `Room is already occupied by ${getSemesterGroupName(roomConflict.semester)} semester group at this time`,
+              conflictReason: `Room is already occupied by ${getSemesterGroupName(semester)} semester group at this time`,
               conflictDetails: {
                 programCode: roomConflict.programCode,
                 semester: roomConflict.semester,
@@ -1274,14 +1360,21 @@ exports.assignClassSpanned = async (req, res) => {
       }
 
       // Check if slot already exists for this program/semester/section
-      const existingSlot = await RoutineSlot.findOne({
+      const slotExistQuery = {
         programCode: programCode.toUpperCase(),
         semester: parseInt(semester),
         section: section.toUpperCase(),
         dayIndex,
         slotIndex,
         semesterGroup: getSemesterGroupName(parseInt(semester))
-      });
+      };
+      
+      // If updating, exclude slots with the same spanId
+      if (isUpdateOperation && spanIdObjectId) {
+        slotExistQuery.spanId = { $ne: spanIdObjectId };
+      }
+      
+      const existingSlot = await RoutineSlot.findOne(slotExistQuery);
 
       if (existingSlot) {
         return res.status(409).json({
@@ -1317,7 +1410,22 @@ exports.assignClassSpanned = async (req, res) => {
     }
 
     // 4. Generate a single spanId to link all slots
-    const spanId = new mongoose.Types.ObjectId();
+    // If this is an update, use the existing spanId; otherwise create new one
+    const finalSpanId = (isUpdateOperation && spanIdObjectId) ? spanIdObjectId : new mongoose.Types.ObjectId();
+    
+    console.log('📋 Using spanId:', finalSpanId, isUpdateOperation ? '(existing - UPDATE)' : '(new - CREATE)');
+    
+    // 4b. If this is an update, delete existing slots with this spanId
+    if (isUpdateOperation && spanIdObjectId) {
+      console.log('🗑️  UPDATE mode: Deleting existing slots with spanId:', spanIdObjectId);
+      
+      const deleteQuery = { spanId: spanIdObjectId };
+      const deleteResult = session ?
+        await RoutineSlot.deleteMany(deleteQuery).session(session) :
+        await RoutineSlot.deleteMany(deleteQuery);
+      
+      console.log('✅ Deleted', deleteResult.deletedCount, 'existing slots with spanId:', spanIdObjectId);
+    }
     
     // 5. Create routine slots for each slotIndex within transaction
     const createdSlots = [];
@@ -1362,7 +1470,7 @@ exports.assignClassSpanned = async (req, res) => {
         isAlternativeWeek: classType === 'P' ? !!isAlternativeWeek : false,
         // Span fields
         spanMaster: isSpanMaster,
-        spanId: spanId,
+        spanId: finalSpanId,
         // Denormalized display fields
         subjectName_display: subject?.name || 'Unknown Subject',
         subjectCode_display: subject?.code || '',
@@ -1447,14 +1555,15 @@ exports.assignClassSpanned = async (req, res) => {
     }
 
     // 8. Return successful response
-    res.status(201).json({
+    const operationType = isUpdateOperation ? 'updated' : 'assigned';
+    res.status(isUpdateOperation ? 200 : 201).json({
       success: true,
       data: {
-        spanId,
+        spanId: finalSpanId,
         slots: createdSlots,
         spanMaster: createdSlots.find(slot => slot.spanMaster === true)
       },
-      message: `Spanned class successfully assigned across ${actualSlotIndexes.length} slots`
+      message: `Multi-period class successfully ${operationType} across ${actualSlotIndexes.length} slots`
     });
   } catch (error) {
     // Abort transaction on error if session exists
@@ -1534,7 +1643,10 @@ exports.clearClass = async (req, res) => {
     // Store the affected teachers before deletion
     const affectedTeachers = routineSlot.teacherIds;
 
+    // Hard delete - completely remove from database
     await RoutineSlot.findByIdAndDelete(routineSlot._id);
+    
+    console.log(`✅ Class deleted: ${programCode.toUpperCase()}-${semester}-${section.toUpperCase()}, Day: ${dayIndex}, Slot: ${slotIndex}, ID: ${routineSlot._id}`);
 
     // Publish message to queue for teacher schedule regeneration (following architecture documentation)
     try {
@@ -1578,8 +1690,17 @@ exports.clearClass = async (req, res) => {
 
     res.json({
       success: true,
-      data: {},
-      message: 'Class cleared successfully'
+      data: {
+        deletedSlot: {
+          programCode: programCode.toUpperCase(),
+          semester: parseInt(semester),
+          section: section.toUpperCase(),
+          dayIndex,
+          slotIndex,
+          affectedTeachers: affectedTeachers ? affectedTeachers.length : 0
+        }
+      },
+      message: 'Class cleared successfully and completely removed from database'
     });
   } catch (error) {
     console.error(error);
@@ -1622,12 +1743,14 @@ exports.clearEntireRoutine = async (req, res) => {
     // Get unique teacher IDs
     const uniqueTeacherIds = [...new Set(allAffectedTeachers.map(id => id.toString()))];
 
-    // Delete all routine slots for this program/semester/section
+    // Hard delete - completely remove all routine slots for this program/semester/section from database
     const deleteResult = await RoutineSlot.deleteMany({
       programCode: programCode.toUpperCase(),
       semester: parseInt(semester),
       section: section.toUpperCase()
     });
+
+    console.log(`✅ Entire routine deleted: ${programCode.toUpperCase()}-${semester}-${section.toUpperCase()}, removed ${deleteResult.deletedCount} slots from database`);
 
     // Publish message to queue for teacher schedule regeneration
     try {
@@ -1670,7 +1793,7 @@ exports.clearEntireRoutine = async (req, res) => {
         section: section.toUpperCase(),
         affectedTeachers: uniqueTeacherIds.length
       },
-      message: `Successfully cleared the entire routine for ${programCode.toUpperCase()} Semester ${semester} Section ${section.toUpperCase()} (${deleteResult.deletedCount} classes removed)`
+      message: `Successfully cleared the entire routine and completely removed from database for ${programCode.toUpperCase()} Semester ${semester} Section ${section.toUpperCase()} (${deleteResult.deletedCount} classes removed)`
     });
   } catch (error) {
     console.error(error);
@@ -2099,7 +2222,7 @@ exports.clearSpanGroup = async (req, res) => {
       spanSlots.flatMap(slot => slot.teacherIds)
     ));
     
-    // Delete all slots with this spanId
+    // Hard delete - completely remove all slots with this spanId from database
     const deleteResult = await RoutineSlot.deleteMany({ spanId });
     
     if (deleteResult.deletedCount === 0) {
@@ -2108,6 +2231,8 @@ exports.clearSpanGroup = async (req, res) => {
         message: 'No slots found for this span group'
       });
     }
+
+    console.log(`✅ Span group deleted: ${spanId}, removed ${deleteResult.deletedCount} slots from database`);
     
     // Publish message to queue for teacher schedule regeneration
     try {
@@ -2144,8 +2269,10 @@ exports.clearSpanGroup = async (req, res) => {
     
     return res.status(200).json({
       success: true,
-      message: `Multi-period class cleared successfully (${deleteResult.deletedCount} periods)`,
-      deletedCount: deleteResult.deletedCount
+      message: `Multi-period class cleared successfully and completely removed from database (${deleteResult.deletedCount} periods)`,
+      deletedCount: deleteResult.deletedCount,
+      spanId,
+      affectedTeachers: teacherIds.length
     });
     
   } catch (error) {

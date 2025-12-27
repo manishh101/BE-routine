@@ -611,7 +611,7 @@ exports.updateRoutineSlot = async (req, res) => {
   }
 };
 
-// @desc    Delete routine slot
+// @desc    Delete routine slot (hard delete - completely removes from database)
 // @route   DELETE /api/routines/slots/:id
 // @access  Private/Admin
 exports.deleteRoutineSlot = async (req, res) => {
@@ -622,11 +622,33 @@ exports.deleteRoutineSlot = async (req, res) => {
       return res.status(404).json({ msg: 'Routine slot not found' });
     }
 
-    // Soft delete
-    routineSlot.isActive = false;
-    await routineSlot.save();
+    // Store affected teacher IDs for cache invalidation
+    const affectedTeacherIds = routineSlot.teacherIds || [];
 
-    res.json({ msg: 'Routine slot deleted successfully' });
+    // Hard delete - completely remove from database
+    await RoutineSlot.findByIdAndDelete(req.params.id);
+
+    // Publish message to queue for teacher schedule regeneration
+    try {
+      if (affectedTeacherIds.length > 0) {
+        const { publishToQueue } = require('./queue.service');
+        await publishToQueue(
+          'teacher_routine_updates',
+          { affectedTeacherIds: affectedTeacherIds.map(id => id.toString()) }
+        );
+        console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
+      }
+    } catch (queueError) {
+      console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueError.message);
+    }
+
+    res.json({ 
+      msg: 'Routine slot deleted successfully and completely removed from database',
+      deletedSlot: {
+        id: req.params.id,
+        affectedTeachers: affectedTeacherIds.length
+      }
+    });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {

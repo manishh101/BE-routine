@@ -540,27 +540,55 @@ const AssignClassModal = ({
 
   // Set form values when editing existing class
   useEffect(() => {
+    console.log('🔄 Form init useEffect triggered', {
+      existingClass: !!existingClass,
+      visible,
+      teachersLength: teachers.length
+    });
+    
     if (existingClass && visible) {
+      console.log('✅ ENTERING EDIT MODE - Setting form values from existingClass:', existingClass);
+      console.log('🔍 existingClass.teacherIds:', existingClass.teacherIds);
+      console.log('🔍 existingClass.isMultiPeriod:', existingClass.isMultiPeriod);
+      console.log('🔍 existingClass.slotIndexes:', existingClass.slotIndexes);
+      
       const isMultiPeriodClass = existingClass.isMultiPeriod || existingClass.slotIndexes?.length > 1;
       setIsMultiPeriod(isMultiPeriodClass);
+      console.log('🔍 Setting isMultiPeriod to:', isMultiPeriodClass);
 
       let convertedSlots = [slotIndex];
       if (existingClass.slotIndexes && existingClass.slotIndexes.length > 0) {
         convertedSlots = existingClass.slotIndexes.map(slotId => normalizeTimeSlotId(slotId));
       }
       setSelectedSlots(convertedSlots);
+      console.log('🔍 Setting selectedSlots to:', convertedSlots);
 
-      form.setFieldsValue({
+      // Prepare form values
+      // IMPORTANT: teacherIds from backend is populated with teacher objects
+      // but the form needs just the IDs
+      const teacherIdsArray = existingClass.teacherIds || [];
+      const teacherIdValues = teacherIdsArray.map(t => 
+        typeof t === 'string' ? t : t._id
+      );
+      
+      const formValues = {
         subjectId: existingClass.subjectId,
-        teacherIds: existingClass.teacherIds || [],
+        teacherIds: teacherIdValues,
         roomId: existingClass.roomId,
         classType: existingClass.classType,
         labGroupType: existingClass.labGroupType || undefined,
         notes: existingClass.notes || '',
         isMultiPeriod: isMultiPeriodClass,
         selectedSlots: convertedSlots
-      });
+      };
+      
+      console.log('🔍 Form values to set:', formValues);
+      console.log('🔍 teacherIds transformed from:', teacherIdsArray, 'to:', teacherIdValues);
+      form.setFieldsValue(formValues);
+      console.log('✅ Form values SET. Getting current values:', form.getFieldsValue());
+      
       setCurrentClassType(existingClass.classType);
+      console.log('🔍 Set currentClassType to:', existingClass.classType);
 
       // Handle elective class editing
       if (existingClass.isElectiveClass && isElectiveSemester) {
@@ -579,8 +607,14 @@ const AssignClassModal = ({
           setIsAlternativeWeek(existingClass.isAlternativeWeek || false);
 
           if (existingClass.labGroupType === 'bothGroups') {
-            setGroupATeachers(existingClass.groupATeachers || []);
-            setGroupBTeachers(existingClass.groupBTeachers || []);
+            // IMPORTANT: groupATeachers and groupBTeachers from backend are also populated objects
+            const groupATeachersArray = existingClass.groupATeachers || [];
+            const groupBTeachersArray = existingClass.groupBTeachers || [];
+            const groupATeacherIds = groupATeachersArray.map(t => typeof t === 'string' ? t : t._id);
+            const groupBTeacherIds = groupBTeachersArray.map(t => typeof t === 'string' ? t : t._id);
+            
+            setGroupATeachers(groupATeacherIds);
+            setGroupBTeachers(groupBTeacherIds);
             setGroupASubject(existingClass.groupASubject || null);
             setGroupBSubject(existingClass.groupBSubject || null);
             setGroupARoom(existingClass.groupARoom || null);
@@ -590,9 +624,9 @@ const AssignClassModal = ({
             const isSameSubject = existingClass.groupASubject && 
                                   existingClass.groupBSubject && 
                                   existingClass.groupASubject === existingClass.groupBSubject;
-            const isSameTeachers = existingClass.groupATeachers && 
-                                   existingClass.groupBTeachers &&
-                                   JSON.stringify(existingClass.groupATeachers.sort()) === JSON.stringify(existingClass.groupBTeachers.sort());
+            const isSameTeachers = groupATeachersArray.length > 0 && 
+                                   groupBTeachersArray.length > 0 &&
+                                   JSON.stringify(groupATeacherIds.sort()) === JSON.stringify(groupBTeacherIds.sort());
             const isSameRoom = existingClass.groupARoom && 
                                existingClass.groupBRoom && 
                                existingClass.groupARoom === existingClass.groupBRoom;
@@ -601,8 +635,8 @@ const AssignClassModal = ({
             setUseSameConfigForBothGroups(isSameConfig);
             
             form.setFieldsValue({
-              groupATeachers: existingClass.groupATeachers || [],
-              groupBTeachers: existingClass.groupBTeachers || [],
+              groupATeachers: groupATeacherIds,
+              groupBTeachers: groupBTeacherIds,
               groupASubject: existingClass.groupASubject || undefined,
               groupBSubject: existingClass.groupBSubject || undefined,
               groupARoom: existingClass.groupARoom || undefined,
@@ -611,7 +645,7 @@ const AssignClassModal = ({
               // If same config is detected, also populate standard fields
               ...(isSameConfig && {
                 subjectId: existingClass.groupASubject,
-                teacherIds: existingClass.groupATeachers,
+                teacherIds: groupATeacherIds,
                 roomId: existingClass.groupARoom
               })
             });
@@ -622,9 +656,11 @@ const AssignClassModal = ({
           }
         }
       if (existingClass.classType && teachers.length > 0) {
+        console.log('📞 Calling filterTeachersBasedOnClassType with:', existingClass.classType);
         filterTeachersBasedOnClassType(existingClass.classType);
       }
     } else if (visible && teachers.length > 0) {
+      console.log('🔄 RESET MODE - !existingClass, calling form.resetFields()');
       form.resetFields();
       setCurrentClassType(null);
       setLabGroupType(null);
