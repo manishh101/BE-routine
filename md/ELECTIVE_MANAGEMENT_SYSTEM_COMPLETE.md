@@ -3,6 +3,10 @@
 ## 🎯 Project Overview
 **Objective**: Implement comprehensive elective management system for IoE Pulchowk Campus supporting both 7th and 8th semester with unified routine display where electives appear in both section routines at same time slots.
 
+**Elective Structure**:
+- **7th Semester**: Elective I only
+- **8th Semester**: Elective II and Elective III
+
 ## 📋 Implementation Summary
 
 ### ✅ **COMPLETED FEATURES**

@@ -429,7 +429,8 @@ const AssignClassModal = ({
     
     if (checked) {
       // Reset to elective-specific defaults
-      const defaultElectiveNumber = semester === 7 ? 1 : 1; // Default to first elective
+      // 7th sem: Elective I (1), 8th sem: Elective II (2) or III (3)
+      const defaultElectiveNumber = semester === 7 ? 1 : 2; // Default to first elective of that semester
       setElectiveNumber(defaultElectiveNumber);
       setElectiveType('TECHNICAL');
       
@@ -618,12 +619,13 @@ const AssignClassModal = ({
       // Handle elective class editing
       if (existingClass.isElectiveClass && isElectiveSemester) {
         setIsElectiveClass(true);
-        setElectiveNumber(existingClass.electiveNumber || existingClass.electiveInfo?.electiveNumber || 1);
+        const defaultElNum = semester === 7 ? 1 : 2; // 7th: Elective I, 8th: Elective II
+        setElectiveNumber(existingClass.electiveNumber || existingClass.electiveInfo?.electiveNumber || defaultElNum);
         setElectiveType(existingClass.electiveType || existingClass.electiveInfo?.electiveType || 'TECHNICAL');
         setTargetSections(existingClass.targetSections || existingClass.displayInSections || ['AB', 'CD']);
         
         form.setFieldsValue({
-          electiveNumber: existingClass.electiveNumber || existingClass.electiveInfo?.electiveNumber || 1,
+          electiveNumber: existingClass.electiveNumber || existingClass.electiveInfo?.electiveNumber || defaultElNum,
           electiveType: existingClass.electiveType || existingClass.electiveInfo?.electiveType || 'TECHNICAL',
           targetSections: existingClass.targetSections || existingClass.displayInSections || ['AB', 'CD']
         });
@@ -854,10 +856,10 @@ const AssignClassModal = ({
       }
       // Validate elective number based on semester
       if (semester === 7 && values.electiveNumber !== 1) {
-        errors.push('7th semester only has one elective');
+        errors.push('7th semester only has Elective I');
       }
-      if (semester === 8 && ![1, 2].includes(values.electiveNumber)) {
-        errors.push('8th semester has Elective I and Elective II only');
+      if (semester === 8 && ![2, 3].includes(values.electiveNumber)) {
+        errors.push('8th semester has Elective II and Elective III only');
       }
     }
 
@@ -1054,8 +1056,8 @@ const AssignClassModal = ({
 
       // Handle elective classes for 7th and 8th semester
       if (isElectiveClass && isElectiveSemester) {
-        const electiveLabel = semester === 7 ? 'Elective' : 
-                             values.electiveNumber === 1 ? 'Elective I' : 'Elective II';
+        const electiveLabel = semester === 7 ? 'Elective I' : 
+                             values.electiveNumber === 2 ? 'Elective II' : 'Elective III';
         
         try {
           // First, get the program ID from program code
@@ -1398,12 +1400,12 @@ const AssignClassModal = ({
                     onChange={(e) => handleElectiveToggle(e.target.checked)}
                   >
                     <Text strong style={{ color: '#722ed1' }}>
-                      {semester === 7 ? 'Elective Class' : 'Elective I/II Class'} (Cross-Section)
+                      {semester === 7 ? 'Elective I Class' : 'Elective II/III Class'} (Cross-Section)
                     </Text>
                     <Text type="secondary" style={{ marginLeft: 8 }}>
                       {semester === 7 
-                        ? 'Schedule elective for both AB and CD sections'
-                        : 'Schedule Elective I or II for both AB and CD sections'
+                        ? 'Schedule Elective I for both AB and CD sections'
+                        : 'Schedule Elective II or III for both AB and CD sections'
                       }
                     </Text>
                   </Checkbox>
@@ -1439,15 +1441,15 @@ const AssignClassModal = ({
                         >
                           {semester === 7 ? (
                             <Option value={1}>
-                              <Tag color="blue">Elective</Tag>
+                              <Tag color="blue">Elective I</Tag>
                             </Option>
                           ) : (
                             <>
-                              <Option value={1}>
-                                <Tag color="blue">Elective I</Tag>
-                              </Option>
                               <Option value={2}>
-                                <Tag color="green">Elective II</Tag>
+                                <Tag color="blue">Elective II</Tag>
+                              </Option>
+                              <Option value={3}>
+                                <Tag color="green">Elective III</Tag>
                               </Option>
                             </>
                           )}
@@ -1502,7 +1504,7 @@ const AssignClassModal = ({
                   
                   <Alert 
                     message="Cross-Section Elective" 
-                    description={`This ${semester === 7 ? 'elective' : `elective ${electiveNumber === 1 ? 'I' : 'II'}`} (${electiveType}) class will appear in both selected sections' routines at the same time slot.`}
+                    description={`This ${semester === 7 ? 'Elective I' : `Elective ${electiveNumber === 2 ? 'II' : 'III'}`} (${electiveType}) class will appear in both selected sections' routines at the same time slot.`}
                     type="info" 
                     showIcon 
                     style={{ marginTop: '12px' }}
@@ -1908,8 +1910,8 @@ const AssignClassModal = ({
                           <Option key={s.subjectId} value={s.subjectId}>
                             <Space>
                               <Tag color="purple">
-                                {semester === 7 ? `Elective (${electiveType})` : 
-                                 `Elective ${electiveNumber === 1 ? 'I' : 'II'} (${electiveType})`}
+                                {semester === 7 ? `Elective I (${electiveType})` : 
+                                 `Elective ${electiveNumber === 2 ? 'II' : 'III'} (${electiveType})`}
                               </Tag>
                               {s.subjectName_display}
                               <Tag color="gold" size="small">Cross-Section</Tag>

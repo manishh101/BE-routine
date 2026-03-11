@@ -1409,7 +1409,7 @@ const RoutineGrid = ({
               <span style={{ 
                 fontSize: '8px', 
                 padding: '2px 4px',
-                backgroundColor: classData.electiveLabel === 'Elective 2' ? '#666' : '#666',
+                backgroundColor: '#666',
                 color: '#fff',
                 borderRadius: '3px',
                 fontWeight: 'normal',
@@ -1454,10 +1454,6 @@ const RoutineGrid = ({
           marginBottom: '2px'
         }}>
           {(() => {
-            // If elective, always show [Practical]
-            if (classData.isElectiveClass) {
-              return '[Practical]';
-            }
             return `[${getClassTypeText(classData.classType)}]`;
           })()}
         </div>

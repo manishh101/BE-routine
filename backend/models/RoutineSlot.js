@@ -155,7 +155,7 @@ const routineSlotSchema = new mongoose.Schema({
       min: 1,
       max: 3,
       default: null
-      // 1st elective, 2nd elective for 8th semester
+      // 7th sem: Elective I (1), 8th sem: Elective II (2) or Elective III (3)
     },
     electiveType: {
       type: String,

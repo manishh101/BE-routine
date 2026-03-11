@@ -276,7 +276,7 @@ exports.getRoutine = async (req, res) => {
         electiveInfo: slot.electiveInfo || null,
         electiveLabel: slot.isElectiveClass ? (
           slot.electiveInfo?.electiveNumber ? 
-            `Elective ${slot.electiveInfo.electiveNumber}` : 
+            `Elective ${['I', 'II', 'III'][slot.electiveInfo.electiveNumber - 1] || slot.electiveInfo.electiveNumber}` : 
             'Elective'
         ) : null,
         
