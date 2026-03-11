@@ -24,54 +24,54 @@ export const invalidateAllRoutineRelatedCaches = async (queryClient, options = {
     // Collect all invalidation promises
     const invalidationPromises = [
       // 1. ROUTINE-RELATED QUERIES
-      queryClient.invalidateQueries(['routine']),
-      queryClient.invalidateQueries(['routines']),
-      queryClient.invalidateQueries(['routineData']),
-      queryClient.invalidateQueries(['programRoutines']),
+      queryClient.invalidateQueries({ queryKey: ['routine'] }),
+      queryClient.invalidateQueries({ queryKey: ['routines'] }),
+      queryClient.invalidateQueries({ queryKey: ['routineData'] }),
+      queryClient.invalidateQueries({ queryKey: ['programRoutines'] }),
       
       // 2. TEACHER SCHEDULE QUERIES (ALL POSSIBLE KEYS)
-      queryClient.invalidateQueries(['teachers']),
-      queryClient.invalidateQueries(['teacherSchedule']),
-      queryClient.invalidateQueries(['teacherSchedules']),
-      queryClient.invalidateQueries(['teacher-schedule-from-routine']), // CRITICAL FIX
-      queryClient.invalidateQueries(['teacherAvailability']),
-      queryClient.invalidateQueries(['teacherWorkload']),
-      queryClient.invalidateQueries(['teacherConflicts']),
+      queryClient.invalidateQueries({ queryKey: ['teachers'] }),
+      queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] }),
+      queryClient.invalidateQueries({ queryKey: ['teacherSchedules'] }),
+      queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] }), // CRITICAL FIX
+      queryClient.invalidateQueries({ queryKey: ['teacherAvailability'] }),
+      queryClient.invalidateQueries({ queryKey: ['teacherWorkload'] }),
+      queryClient.invalidateQueries({ queryKey: ['teacherConflicts'] }),
       
       // 3. ROOM SCHEDULE QUERIES (ALL POSSIBLE KEYS)
-      queryClient.invalidateQueries(['rooms']),
-      queryClient.invalidateQueries(['roomSchedule']),
-      queryClient.invalidateQueries(['roomAvailability']),
-      queryClient.invalidateQueries(['roomConflicts']),
-      queryClient.invalidateQueries(['vacantRooms']),
+      queryClient.invalidateQueries({ queryKey: ['rooms'] }),
+      queryClient.invalidateQueries({ queryKey: ['roomSchedule'] }),
+      queryClient.invalidateQueries({ queryKey: ['roomAvailability'] }),
+      queryClient.invalidateQueries({ queryKey: ['roomConflicts'] }),
+      queryClient.invalidateQueries({ queryKey: ['vacantRooms'] }),
       
       // 4. SUBJECT-RELATED QUERIES
-      queryClient.invalidateQueries(['subjects']),
-      queryClient.invalidateQueries(['subjectSchedule']),
-      queryClient.invalidateQueries(['availableSubjects']),
+      queryClient.invalidateQueries({ queryKey: ['subjects'] }),
+      queryClient.invalidateQueries({ queryKey: ['subjectSchedule'] }),
+      queryClient.invalidateQueries({ queryKey: ['availableSubjects'] }),
       
       // 5. CONFLICT DETECTION QUERIES
-      queryClient.invalidateQueries(['conflicts']),
-      queryClient.invalidateQueries(['scheduleConflicts']),
-      queryClient.invalidateQueries(['timeConflicts']),
+      queryClient.invalidateQueries({ queryKey: ['conflicts'] }),
+      queryClient.invalidateQueries({ queryKey: ['scheduleConflicts'] }),
+      queryClient.invalidateQueries({ queryKey: ['timeConflicts'] }),
       
       // 6. ANALYTICS AND REPORTS
-      queryClient.invalidateQueries(['analytics']),
-      queryClient.invalidateQueries(['reports']),
-      queryClient.invalidateQueries(['statistics']),
-      queryClient.invalidateQueries(['utilization']),
+      queryClient.invalidateQueries({ queryKey: ['analytics'] }),
+      queryClient.invalidateQueries({ queryKey: ['reports'] }),
+      queryClient.invalidateQueries({ queryKey: ['statistics'] }),
+      queryClient.invalidateQueries({ queryKey: ['utilization'] }),
       
       // 7. TIME SLOTS (might be cached)
-      queryClient.invalidateQueries(['timeSlots']),
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] }),
     ];
     
     // 8. SPECIFIC PROGRAM/SEMESTER/SECTION QUERIES
     if (programCode && semester && section) {
       invalidationPromises.push(
-        queryClient.invalidateQueries(['routine', programCode, semester, section]),
-        queryClient.invalidateQueries(['program', programCode]),
-        queryClient.invalidateQueries(['programSemesters', programCode]),
-        queryClient.invalidateQueries(['programSections', programCode])
+        queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] }),
+        queryClient.invalidateQueries({ queryKey: ['program', programCode] }),
+        queryClient.invalidateQueries({ queryKey: ['programSemesters', programCode] }),
+        queryClient.invalidateQueries({ queryKey: ['programSections', programCode] })
       );
     }
     
@@ -100,8 +100,8 @@ export const invalidateAllRoutineRelatedCaches = async (queryClient, options = {
     if (affectedTeachers.length > 0) {
       affectedTeachers.forEach(teacherId => {
         invalidationPromises.push(
-          queryClient.invalidateQueries(['teacherSchedule', teacherId]),
-          queryClient.invalidateQueries(['teacher-schedule-from-routine', teacherId])
+          queryClient.invalidateQueries({ queryKey: ['teacherSchedule', teacherId] }),
+          queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine', teacherId] })
         );
       });
     }
@@ -109,7 +109,7 @@ export const invalidateAllRoutineRelatedCaches = async (queryClient, options = {
     if (affectedRooms.length > 0) {
       affectedRooms.forEach(roomId => {
         invalidationPromises.push(
-          queryClient.invalidateQueries(['roomSchedule', roomId])
+          queryClient.invalidateQueries({ queryKey: ['roomSchedule', roomId] })
         );
       });
     }
@@ -157,28 +157,28 @@ export const invalidateAfterClassAssignment = async (queryClient, context = {}) 
   // This is more aggressive than just invalidating - it removes entries from cache entirely
   
   // Force remove all relevant cache entries
-  queryClient.removeQueries(['teacher-schedule-from-routine']);
-  queryClient.removeQueries(['roomSchedule']);
-  queryClient.removeQueries(['teacherSchedule']);
+  queryClient.removeQueries({ queryKey: ['teacher-schedule-from-routine'] });
+  queryClient.removeQueries({ queryKey: ['roomSchedule'] });
+  queryClient.removeQueries({ queryKey: ['teacherSchedule'] });
   
   // Then set up invalidation and refetch promises
   const invalidationPromises = [
     // Program routine
-    queryClient.refetchQueries(['routine', context.programCode, context.semester, context.section]),
+    queryClient.refetchQueries({ queryKey: ['routine', context.programCode, context.semester, context.section] }),
     
     // Teacher schedules (general) - CRITICAL FIX: Add 'invalidateQueries' in addition to refetch
-    queryClient.refetchQueries(['teachers']),
-    queryClient.refetchQueries(['teacher-schedule-from-routine']),
-    queryClient.invalidateQueries(['teacher-schedule-from-routine']), // CRITICAL FIX
-    queryClient.invalidateQueries(['teacherSchedule']), // CRITICAL FIX
+    queryClient.refetchQueries({ queryKey: ['teachers'] }),
+    queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine'] }),
+    queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] }), // CRITICAL FIX
+    queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] }), // CRITICAL FIX
     
     // Room schedules (general) - CRITICAL FIX: Add 'invalidateQueries' in addition to refetch
-    queryClient.refetchQueries(['rooms']),
-    queryClient.refetchQueries(['roomSchedule']),
-    queryClient.invalidateQueries(['roomSchedule']), // CRITICAL FIX
+    queryClient.refetchQueries({ queryKey: ['rooms'] }),
+    queryClient.refetchQueries({ queryKey: ['roomSchedule'] }),
+    queryClient.invalidateQueries({ queryKey: ['roomSchedule'] }), // CRITICAL FIX
     
     // Force refetch timeslots
-    queryClient.refetchQueries(['timeSlots']),
+    queryClient.refetchQueries({ queryKey: ['timeSlots'] }),
     
     // CRITICAL FIX: Force invalidate teacher and room queries with extreme prejudice
     queryClient.invalidateQueries({
@@ -193,8 +193,8 @@ export const invalidateAfterClassAssignment = async (queryClient, context = {}) 
     }),
     
     // Force a refetch with no arguments to update general section views
-    queryClient.refetchQueries(['teacher-schedule-from-routine']),
-    queryClient.refetchQueries(['roomSchedule'])
+    queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine'] }),
+    queryClient.refetchQueries({ queryKey: ['roomSchedule'] })
   ];
   
   // Add specific teacher ID invalidations
@@ -202,7 +202,7 @@ export const invalidateAfterClassAssignment = async (queryClient, context = {}) 
     affectedTeachers.forEach(teacherId => {
       if (teacherId) {
         invalidationPromises.push(
-          queryClient.refetchQueries(['teacher-schedule-from-routine', teacherId])
+          queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine', teacherId] })
         );
       }
     });
@@ -213,7 +213,7 @@ export const invalidateAfterClassAssignment = async (queryClient, context = {}) 
     affectedRooms.forEach(roomId => {
       if (roomId) {
         invalidationPromises.push(
-          queryClient.refetchQueries(['roomSchedule', roomId])
+          queryClient.refetchQueries({ queryKey: ['roomSchedule', roomId] })
         );
       }
     });
@@ -324,8 +324,8 @@ export const useAutoCacheInvalidation = (queryClient, watchedKeys = []) => {
   const invalidateAll = useCallback(() => {
     if (queryClient) {
       // CRITICAL FIX: Force immediate refetch of key queries for teacher and room schedules
-      queryClient.refetchQueries(['teacher-schedule-from-routine']);
-      queryClient.refetchQueries(['roomSchedule']);
+      queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine'] });
+      queryClient.refetchQueries({ queryKey: ['roomSchedule'] });
       
       return invalidateAllRoutineRelatedCaches(queryClient);
     }
@@ -354,18 +354,18 @@ export const useAutoCacheInvalidation = (queryClient, watchedKeys = []) => {
         console.log('📢 [CacheInvalidation] EMERGENCY RESET: Removing cached queries completely...');
         
         // First remove all caches for these query keys
-        queryClient.removeQueries(['teacher-schedule-from-routine']);
-        queryClient.removeQueries(['roomSchedule']);
-        queryClient.removeQueries(['teacherSchedule']);
+        queryClient.removeQueries({ queryKey: ['teacher-schedule-from-routine'] });
+        queryClient.removeQueries({ queryKey: ['roomSchedule'] });
+        queryClient.removeQueries({ queryKey: ['teacherSchedule'] });
         
         // Then invalidate them to ensure fresh data is fetched
-        queryClient.invalidateQueries(['teacher-schedule-from-routine']);
-        queryClient.invalidateQueries(['roomSchedule']);
-        queryClient.invalidateQueries(['teacherSchedule']);
+        queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] });
+        queryClient.invalidateQueries({ queryKey: ['roomSchedule'] });
+        queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] });
         
         // Force immediate refetch to get fresh data from server
-        queryClient.refetchQueries(['teacher-schedule-from-routine']);
-        queryClient.refetchQueries(['roomSchedule']);
+        queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine'] });
+        queryClient.refetchQueries({ queryKey: ['roomSchedule'] });
         
         // Get specific teacher and room data if available
         const { teacherIds, roomId, programCode, semester, section } = event.detail || {};

@@ -1,3 +1,5 @@
+const RoutineSlot = require('../models/RoutineSlot');
+
 // @desc    Get all routines (paginated with filters)
 // @route   GET /api/routines
 // @access  Private
@@ -43,9 +45,9 @@ exports.getAllRoutines = async (req, res) => {
       .populate('teacherIds', 'shortName fullName')
       .populate('roomId', 'name building capacity')
       .populate('academicYearId', 'title nepaliYear status')
-      .sort(sort)
       .skip(skip)
-      .limit(limitVal);
+      .limit(limitVal)
+      .lean();
     
     res.json({
       success: true,
@@ -60,7 +62,7 @@ exports.getAllRoutines = async (req, res) => {
     console.error('Error in getAllRoutines:', err.message);
     res.status(500).json({
       success: false,
-      msg: 'Server error',
+      message: 'Server error',
       error: err.message
     });
   }

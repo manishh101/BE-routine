@@ -63,7 +63,7 @@ exports.getProgramCurriculum = async (req, res) => {
     const curriculum = await ProgramSemester.find({
       programCode: programCode.toUpperCase(),
       status: 'Active'
-    }).sort({ semester: 1 });
+    }).sort({ semester: 1 }).lean();
 
     res.json({
       success: true,
@@ -102,10 +102,14 @@ exports.createProgramSemester = async (req, res) => {
       });
     }
 
-    // Validate all subjects exist and populate display fields
+    // Validate all subjects exist and populate display fields in parallel
+    const subjectIds = subjectsOffered.map(s => s.subjectId);
+    const foundSubjects = await Subject.find({ _id: { $in: subjectIds } }).lean();
+    const subjectMap = new Map(foundSubjects.map(s => [s._id.toString(), s]));
+
     const populatedSubjects = [];
     for (const subjectData of subjectsOffered) {
-      const subject = await Subject.findById(subjectData.subjectId);
+      const subject = subjectMap.get(subjectData.subjectId.toString());
       if (!subject) {
         return res.status(404).json({
           success: false,

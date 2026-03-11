@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { subjectsAPI } from '../services/subjectsAPI';
+import { subjectsAPI } from '../services/api';
 import { useFilters, useFilteredData } from '../hooks/useFilters';
 import {
   Card, 
@@ -53,17 +53,21 @@ const PublicSubjects = () => {
         // Fetch subjects based on selected filters
         if (filters.program && filters.semester) {
           // Both program and semester selected - get specific subjects
-          const programSubjects = await subjectsAPI.getSubjectsByProgram(filters.program);
-          subjects = programSubjects.filter(subject => Number(subject.semester) === Number(filters.semester));
+          const response = await subjectsAPI.getSubjectsByProgram(filters.program);
+          const programSubjects = response.data || response;
+          subjects = (Array.isArray(programSubjects) ? programSubjects : []).filter(subject => Number(subject.semester) === Number(filters.semester));
         } else if (filters.program) {
           // Only program selected - get all subjects for that program
-          subjects = await subjectsAPI.getSubjectsByProgram(filters.program);
+          const response = await subjectsAPI.getSubjectsByProgram(filters.program);
+          subjects = response.data || response;
         } else if (filters.semester) {
           // Only semester selected - get all subjects for that semester
-          subjects = await subjectsAPI.getSubjectsBySemester(filters.semester);
+          const response = await subjectsAPI.getSubjectsBySemester(filters.semester);
+          subjects = response.data || response;
         } else {
           // No filters - get all subjects
-          subjects = await subjectsAPI.getAllSubjects();
+          const response = await subjectsAPI.getSubjects();
+          subjects = response.data || response;
         }
         
         return subjects;

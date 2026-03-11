@@ -66,10 +66,10 @@ exports.createTimeSlot = async (req, res) => {
     console.error(err.message);
     if (err.code === 11000) {
       if (err.keyPattern?._id) {
-        return res.status(400).json({ msg: 'Time slot with this slot index already exists' });
+        return res.status(400).json({ success: false, message: 'Time slot with this slot index already exists' });
       }
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -120,7 +120,7 @@ exports.createContextTimeSlot = async (req, res) => {
     });
   } catch (err) {
     console.error('Context time slot creation error:', err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -157,7 +157,7 @@ exports.getTimeSlots = async (req, res) => {
       if (dayType) mainFilter.dayType = dayType;
       if (category) mainFilter.category = category;
 
-      const timeSlots = await TimeSlot.find(mainFilter).sort({ sortOrder: 1 });
+      const timeSlots = await TimeSlot.find(mainFilter).sort({ sortOrder: 1 }).lean();
       res.json(timeSlots);
       return;
     }
@@ -192,11 +192,11 @@ exports.getTimeSlots = async (req, res) => {
     if (dayType) mainFilter.dayType = dayType;
     if (category) mainFilter.category = category;
 
-    const timeSlots = await TimeSlot.find(mainFilter).sort({ sortOrder: 1 });
+    const timeSlots = await TimeSlot.find(mainFilter).sort({ sortOrder: 1 }).lean();
     res.json(timeSlots);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -207,14 +207,14 @@ exports.getTimeSlotsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
     if (!['Morning', 'Afternoon', 'Evening'].includes(category)) {
-      return res.status(400).json({ msg: 'Invalid category. Must be Morning, Afternoon, or Evening' });
+      return res.status(400).json({ success: false, message: 'Invalid category. Must be Morning, Afternoon, or Evening' });
     }
     
-    const timeSlots = await TimeSlot.find({ category }).sort({ sortOrder: 1 });
+    const timeSlots = await TimeSlot.find({ category }).sort({ sortOrder: 1 }).lean();
     res.json(timeSlots);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -249,12 +249,12 @@ exports.initializeTimeSlots = async (req, res) => {
     // Handle duplicate key errors gracefully
     if (err.code === 11000) {
       return res.status(400).json({
-        msg: 'Some time slots already exist',
+        message: 'Some time slots already exist',
         error: 'Duplicate slot indexes detected'
       });
     }
     
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -267,19 +267,19 @@ exports.getTimeSlotById = async (req, res) => {
     const timeSlotId = parseInt(req.params.id);
     
     if (isNaN(timeSlotId)) {
-      return res.status(400).json({ msg: 'Invalid time slot ID. Must be a number.' });
+      return res.status(400).json({ success: false, message: 'Invalid time slot ID. Must be a number.' });
     }
     
     const timeSlot = await TimeSlot.findById(timeSlotId);
     
     if (!timeSlot) {
-      return res.status(404).json({ msg: 'Time slot not found' });
+      return res.status(404).json({ success: false, message: 'Time slot not found' });
     }
 
     res.json(timeSlot);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -297,13 +297,13 @@ exports.updateTimeSlot = async (req, res) => {
     const timeSlotId = parseInt(req.params.id);
     
     if (isNaN(timeSlotId)) {
-      return res.status(400).json({ msg: 'Invalid time slot ID. Must be a number.' });
+      return res.status(400).json({ success: false, message: 'Invalid time slot ID. Must be a number.' });
     }
     
     let timeSlot = await TimeSlot.findById(timeSlotId);
     
     if (!timeSlot) {
-      return res.status(404).json({ msg: 'Time slot not found' });
+      return res.status(404).json({ success: false, message: 'Time slot not found' });
     }
 
     timeSlot = await TimeSlot.findByIdAndUpdate(
@@ -315,7 +315,7 @@ exports.updateTimeSlot = async (req, res) => {
     res.json(timeSlot);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -336,14 +336,14 @@ exports.bulkDeleteTimeSlots = async (req, res) => {
     } else {
       return res.status(400).json({ 
         success: false,
-        msg: 'Invalid request format. Expected array of time slot IDs or object with timeSlotIds/ids array.' 
+        message: 'Invalid request format. Expected array of time slot IDs or object with timeSlotIds/ids array.' 
       });
     }
 
     if (!timeSlotIds.length) {
       return res.status(400).json({ 
         success: false,
-        msg: 'No time slot IDs provided' 
+        message: 'No time slot IDs provided' 
       });
     }
 
@@ -355,7 +355,7 @@ exports.bulkDeleteTimeSlots = async (req, res) => {
     if (existingTimeSlots.length === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'No time slots found with the provided IDs',
+        message: 'No time slots found with the provided IDs',
         notFoundIds,
         notFoundCount: notFoundIds.length
       });
@@ -431,7 +431,7 @@ exports.bulkDeleteTimeSlots = async (req, res) => {
     console.error('Bulk delete time slots error:', err.message);
     res.status(500).json({ 
       success: false,
-      msg: 'Server error during bulk deletion', 
+      message: 'Server error during bulk deletion', 
       error: err.message 
     });
   }
@@ -442,35 +442,28 @@ exports.bulkDeleteTimeSlots = async (req, res) => {
 // @access  Private/Admin
 exports.deleteTimeSlot = async (req, res) => {
   try {
-    console.log('Delete time slot request for ID:', req.params.id, typeof req.params.id);
     
     // Convert the ID to number since TimeSlot._id is a Number
     const timeSlotId = parseInt(req.params.id);
     
     if (isNaN(timeSlotId)) {
-      console.log('Invalid timeSlotId conversion:', req.params.id, '->', timeSlotId);
-      return res.status(400).json({ msg: 'Invalid time slot ID. Must be a number.' });
+      return res.status(400).json({ success: false, message: 'Invalid time slot ID. Must be a number.' });
     }
     
-    console.log('Looking for TimeSlot with ID:', timeSlotId, typeof timeSlotId);
     const timeSlot = await TimeSlot.findById(timeSlotId);
     
     if (!timeSlot) {
-      console.log('TimeSlot not found with ID:', timeSlotId);
-      return res.status(404).json({ msg: 'Time slot not found' });
+      return res.status(404).json({ success: false, message: 'Time slot not found' });
     }
 
-    console.log('Found TimeSlot:', timeSlot.label, timeSlot.startTime, '-', timeSlot.endTime);
 
     // Check if time slot is being used in routine slots
     const RoutineSlot = require('../models/RoutineSlot');
-    console.log('Checking usage with slotIndex:', timeSlotId);
     const usageCount = await RoutineSlot.countDocuments({
       slotIndex: timeSlotId,
       isActive: true
     });
     
-    console.log('Usage count for slotIndex', timeSlotId, ':', usageCount);
 
     // Check for force delete parameter
     const forceDelete = req.query.force === 'true';
@@ -493,7 +486,7 @@ exports.deleteTimeSlot = async (req, res) => {
       }
 
       return res.status(400).json({ 
-        msg: `Cannot delete time slot. It is being used in ${usageCount} active routine slots.`,
+        message: `Cannot delete time slot. It is being used in ${usageCount} active routine slots.`,
         usageCount,
         canForceDelete: true,
         sampleUsage: sampleUsage ? {
@@ -519,12 +512,12 @@ exports.deleteTimeSlot = async (req, res) => {
       : 'Time slot deleted successfully';
       
     res.json({ 
-      msg: responseMsg,
+      message: responseMsg,
       removedFromSlots: forceDelete ? usageCount : 0
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -539,7 +532,7 @@ exports.reorderTimeSlots = async (req, res) => {
     console.error('Reorder time slots error:', err.message);
     res.status(500).json({ 
       success: false,
-      msg: 'Server error during reordering', 
+      message: 'Server error during reordering', 
       error: err.message 
     });
   }

@@ -1,17 +1,11 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:7102/api';
+import api from './api';
 
 // Queue service for frontend communication with backend queue operations
 class QueueService {
-  constructor() {
-    this.baseURL = API_BASE_URL;
-  }
-
   // Check queue health status
   async checkQueueHealth() {
     try {
-      const response = await axios.get(`${this.baseURL}/health/queue`);
+      const response = await api.get('/health/queue');
       return response.data;
     } catch (error) {
       console.error('Queue health check failed:', error);
@@ -26,7 +20,7 @@ class QueueService {
   // Get general API health
   async checkAPIHealth() {
     try {
-      const response = await axios.get(`${this.baseURL}/health`);
+      const response = await api.get('/health');
       return response.data;
     } catch (error) {
       console.error('API health check failed:', error);
@@ -42,12 +36,12 @@ class QueueService {
   async getQueueStats() {
     try {
       const health = await this.checkQueueHealth();
-      const api = await this.checkAPIHealth();
+      const apiHealth = await this.checkAPIHealth();
       
       return {
         queue: health,
-        api: api,
-        overall: health.success && api.success ? 'healthy' : 'degraded'
+        api: apiHealth,
+        overall: health.success && apiHealth.success ? 'healthy' : 'degraded'
       };
     } catch (error) {
       return {
@@ -62,9 +56,7 @@ class QueueService {
   // Trigger manual teacher schedule regeneration (if needed)
   async triggerTeacherScheduleUpdate(teacherId) {
     try {
-      // This would typically be handled automatically by the queue
-      // but could be useful for manual triggers or debugging
-      const response = await axios.post(`${this.baseURL}/routines/regenerate-teacher-schedule`, {
+      const response = await api.post('/routines/regenerate-teacher-schedule', {
         teacherId
       });
       return response.data;
@@ -77,7 +69,7 @@ class QueueService {
   // Get queue processing status (for UI feedback)
   async getProcessingStatus() {
     try {
-      const response = await axios.get(`${this.baseURL}/queue/status`);
+      const response = await api.get('/queue/status');
       return response.data;
     } catch (error) {
       console.error('Failed to get processing status:', error);

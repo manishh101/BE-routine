@@ -29,10 +29,10 @@ exports.createLabGroup = async (req, res) => {
     console.error(err.message);
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Lab group for this program/subject/semester/section already exists' 
+        message: 'Lab group for this program/subject/semester/section already exists' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -55,12 +55,13 @@ exports.getLabGroups = async (req, res) => {
       .populate('subjectId', 'code name')
       .populate('academicYearId', 'title nepaliYear')
       .populate('groups.teacherId', 'shortName fullName')
-      .sort({ semester: 1, section: 1 });
+      .sort({ semester: 1, section: 1 })
+      .lean();
       
     res.json(labGroups);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -76,16 +77,16 @@ exports.getLabGroupById = async (req, res) => {
       .populate('groups.teacherId', 'shortName fullName email designation');
     
     if (!labGroup) {
-      return res.status(404).json({ msg: 'Lab group not found' });
+      return res.status(404).json({ success: false, message: 'Lab group not found' });
     }
 
     res.json(labGroup);
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Lab group not found' });
+      return res.status(404).json({ success: false, message: 'Lab group not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -102,7 +103,7 @@ exports.updateLabGroup = async (req, res) => {
     let labGroup = await LabGroup.findById(req.params.id);
     
     if (!labGroup) {
-      return res.status(404).json({ msg: 'Lab group not found' });
+      return res.status(404).json({ success: false, message: 'Lab group not found' });
     }
 
     // Validate teacher assignments if updating groups
@@ -116,7 +117,7 @@ exports.updateLabGroup = async (req, res) => {
           
           if (!teacher) {
             return res.status(400).json({ 
-              msg: `Teacher ${group.teacherId} not found or inactive` 
+              message: `Teacher ${group.teacherId} not found or inactive` 
             });
           }
         }
@@ -137,9 +138,9 @@ exports.updateLabGroup = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Lab group not found' });
+      return res.status(404).json({ success: false, message: 'Lab group not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -151,7 +152,7 @@ exports.deleteLabGroup = async (req, res) => {
     const labGroup = await LabGroup.findById(req.params.id);
     
     if (!labGroup) {
-      return res.status(404).json({ msg: 'Lab group not found' });
+      return res.status(404).json({ success: false, message: 'Lab group not found' });
     }
 
     // Check if lab group is referenced in routine slots
@@ -163,18 +164,18 @@ exports.deleteLabGroup = async (req, res) => {
 
     if (routineSlots > 0) {
       return res.status(400).json({ 
-        msg: `Cannot delete lab group. It is referenced in ${routineSlots} routine slots.` 
+        message: `Cannot delete lab group. It is referenced in ${routineSlots} routine slots.` 
       });
     }
 
     await LabGroup.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Lab group deleted successfully' });
+    res.json({ success: false, message: 'Lab group deleted successfully' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Lab group not found' });
+      return res.status(404).json({ success: false, message: 'Lab group not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -187,7 +188,7 @@ exports.autoCreateLabGroups = async (req, res) => {
     
     if (!programId || !semester || !academicYearId) {
       return res.status(400).json({ 
-        msg: 'Program ID, semester, and academic year ID are required' 
+        message: 'Program ID, semester, and academic year ID are required' 
       });
     }
 
@@ -200,7 +201,7 @@ exports.autoCreateLabGroups = async (req, res) => {
     }).populate('subjects.subjectId');
 
     if (!programSemester) {
-      return res.status(404).json({ msg: 'Program semester not found' });
+      return res.status(404).json({ success: false, message: 'Program semester not found' });
     }
 
     const labSubjects = programSemester.subjects.filter(s => 
@@ -209,7 +210,7 @@ exports.autoCreateLabGroups = async (req, res) => {
 
     if (labSubjects.length === 0) {
       return res.status(400).json({ 
-        msg: 'No lab subjects found for this program semester' 
+        message: 'No lab subjects found for this program semester' 
       });
     }
 
@@ -262,11 +263,11 @@ exports.autoCreateLabGroups = async (req, res) => {
     }
 
     res.status(201).json({
-      msg: `Created ${createdLabGroups.length} lab groups`,
+      message: `Created ${createdLabGroups.length} lab groups`,
       labGroups: createdLabGroups
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

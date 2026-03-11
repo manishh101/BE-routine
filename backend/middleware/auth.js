@@ -62,16 +62,18 @@ exports.protect = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('JWT verification error:', err.message);
-    res.status(401).json({ msg: 'Token is not valid' });
+    res.status(401).json({ success: false, message: 'Token is not valid' });
   }
 };
 
-// Middleware to check if user is admin
-exports.authorize = (role) => {
+// Middleware to check if user has one of the allowed roles
+// Usage: authorize('admin') or authorize('admin', 'department_head')
+exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (req.user.role !== role) {
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({
-        msg: `User role ${req.user.role} is not authorized to access this resource`,
+        success: false,
+        message: `User role '${req.user.role}' is not authorized to access this resource`,
       });
     }
     next();
@@ -123,7 +125,7 @@ exports.optionalAuth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.log('Optional auth - proceeding without authentication:', err.message);
+    // Token invalid or expired — silently continue without user context
     req.user = null;
     next();
   }

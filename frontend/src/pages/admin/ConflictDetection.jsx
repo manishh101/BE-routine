@@ -78,8 +78,8 @@ const ConflictDetection = () => {
     mutationFn: () => conflictsAPI.detectConflicts(),
     onSuccess: () => {
       message.success('Conflict detection completed');
-      queryClient.invalidateQueries(['active-conflicts']);
-      queryClient.invalidateQueries(['conflict-report']);
+      queryClient.invalidateQueries({ queryKey: ['active-conflicts'] });
+      queryClient.invalidateQueries({ queryKey: ['conflict-report'] });
     },
     onError: (error) => {
       message.error(`Failed to detect conflicts: ${error.response?.data?.message || error.message}`);
@@ -91,8 +91,8 @@ const ConflictDetection = () => {
     mutationFn: (conflictId) => conflictsAPI.markConflictResolved(conflictId),
     onSuccess: () => {
       message.success('Conflict marked as resolved');
-      queryClient.invalidateQueries(['active-conflicts']);
-      queryClient.invalidateQueries(['conflict-report']);
+      queryClient.invalidateQueries({ queryKey: ['active-conflicts'] });
+      queryClient.invalidateQueries({ queryKey: ['conflict-report'] });
       setIsDetailModalVisible(false);
     },
     onError: (error) => {
@@ -257,7 +257,7 @@ const ConflictDetection = () => {
               icon={<CheckCircleOutlined />}
               onClick={() => handleResolveConflict(record._id)}
               size="small"
-              loading={resolveMutation.isLoading}
+              loading={resolveMutation.isPending}
             >
               Resolve
             </Button>
@@ -315,7 +315,7 @@ const ConflictDetection = () => {
                     type="primary" 
                     icon={<FireOutlined />}
                     onClick={handleDetectConflicts}
-                    loading={detectMutation.isLoading}
+                    loading={detectMutation.isPending}
                   >
                     Run Detection
                   </Button>
@@ -551,7 +551,7 @@ const ConflictDetection = () => {
               key="resolve" 
               type="primary" 
               onClick={() => handleResolveConflict(selectedConflict._id)}
-              loading={resolveMutation.isLoading}
+              loading={resolveMutation.isPending}
             >
               Mark as Resolved
             </Button>

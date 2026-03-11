@@ -99,6 +99,8 @@ const AssignClassModal = ({
   
   // Ref to track if teachers have been initialized to prevent infinite loops
   const teachersInitializedRef = useRef(false);
+  // Ref to track if we're currently populating form from existingClass (prevents onValuesChange from resetting)
+  const isInitializingEditRef = useRef(false);
   const [targetSections, setTargetSections] = useState(['AB', 'CD']);
   
   // Multiple subjects for electives
@@ -323,13 +325,22 @@ const AssignClassModal = ({
       return;
     }
 
+    // Build exclusion options to avoid self-conflicts when editing an existing class
+    const exclusionOpts = {};
+    if (existingClass?._id) {
+      exclusionOpts.excludeSlotId = existingClass._id;
+    }
+    if (existingClass?.spanId) {
+      exclusionOpts.excludeSpanId = existingClass.spanId;
+    }
+
     // For Lecture, Tutorial, and Practical classes, check availability.
     // The UI will handle whether to disable the option (for L/T) or just show a tag (for P).
     setChecking(true);
     try {
       const availabilityChecks = teachers.map(async (teacher) => {
         try {
-          const response = await routinesAPI.checkTeacherAvailability(teacher._id, dayIndex, slotIndex, semester);
+          const response = await routinesAPI.checkTeacherAvailability(teacher._id, dayIndex, slotIndex, semester, exclusionOpts);
           const availabilityData = response.data?.data || response.data;
           return {
             ...teacher,
@@ -360,17 +371,26 @@ const AssignClassModal = ({
       })));
     }
     setChecking(false);
-  }, [teachers, dayIndex, slotIndex, semester]);
+  }, [teachers, dayIndex, slotIndex, semester, existingClass]);
 
   // Filter rooms based on availability
   const filterRoomsBasedOnAvailability = useCallback(async () => {
     if (rooms.length === 0) return;
 
+    // Build exclusion options to avoid self-conflicts when editing an existing class
+    const exclusionOpts = {};
+    if (existingClass?._id) {
+      exclusionOpts.excludeSlotId = existingClass._id;
+    }
+    if (existingClass?.spanId) {
+      exclusionOpts.excludeSpanId = existingClass.spanId;
+    }
+
     setChecking(true);
     try {
       const availabilityChecks = rooms.map(async (room) => {
         try {
-          const response = await routinesAPI.checkRoomAvailability(room._id, dayIndex, slotIndex, semester);
+          const response = await routinesAPI.checkRoomAvailability(room._id, dayIndex, slotIndex, semester, exclusionOpts);
           const availabilityData = response.data?.data || response.data;
           return {
             ...room,
@@ -401,7 +421,7 @@ const AssignClassModal = ({
       })));
     }
     setChecking(false);
-  }, [rooms, dayIndex, slotIndex, semester]);
+  }, [rooms, dayIndex, slotIndex, semester, existingClass]);
 
   // Handle elective class toggle
   const handleElectiveToggle = (checked) => {
@@ -535,6 +555,7 @@ const AssignClassModal = ({
     if (!visible) {
       setTeacherSearchText('');
       setRoomSearchText('');
+      isInitializingEditRef.current = false;
     }
   }, [visible]);
 
@@ -551,6 +572,9 @@ const AssignClassModal = ({
       console.log('🔍 existingClass.teacherIds:', existingClass.teacherIds);
       console.log('🔍 existingClass.isMultiPeriod:', existingClass.isMultiPeriod);
       console.log('🔍 existingClass.slotIndexes:', existingClass.slotIndexes);
+      
+      // Prevent onValuesChange from resetting values during edit initialization
+      isInitializingEditRef.current = true;
       
       const isMultiPeriodClass = existingClass.isMultiPeriod || existingClass.slotIndexes?.length > 1;
       setIsMultiPeriod(isMultiPeriodClass);
@@ -577,6 +601,7 @@ const AssignClassModal = ({
         roomId: existingClass.roomId,
         classType: existingClass.classType,
         labGroupType: existingClass.labGroupType || undefined,
+        labGroup: existingClass.labGroup || undefined,
         notes: existingClass.notes || '',
         isMultiPeriod: isMultiPeriodClass,
         selectedSlots: convertedSlots
@@ -602,11 +627,30 @@ const AssignClassModal = ({
           electiveType: existingClass.electiveType || existingClass.electiveInfo?.electiveType || 'TECHNICAL',
           targetSections: existingClass.targetSections || existingClass.displayInSections || ['AB', 'CD']
         });
-      }        if (existingClass.classType === 'P' && existingClass.labGroupType) {
-          setLabGroupType(existingClass.labGroupType);
+      }
+      
+      // Handle practical (lab) class editing - derive labGroupType from labGroup if not provided
+      if (existingClass.classType === 'P') {
+        let derivedLabGroupType = existingClass.labGroupType || null;
+        
+        // Derive labGroupType from labGroup if not explicitly set
+        if (!derivedLabGroupType && existingClass.labGroup) {
+          const sectionGroups = section?.toUpperCase() === 'CD' ? ['C', 'D'] : ['A', 'B'];
+          if (existingClass.labGroup === sectionGroups[0]) {
+            derivedLabGroupType = 'groupA';
+          } else if (existingClass.labGroup === sectionGroups[1]) {
+            derivedLabGroupType = 'groupB';
+          } else if (existingClass.labGroup === 'ALL' || existingClass.isMultiGroup) {
+            derivedLabGroupType = 'bothGroups';
+          }
+        }
+        
+        if (derivedLabGroupType) {
+          setLabGroupType(derivedLabGroupType);
+          form.setFieldsValue({ labGroupType: derivedLabGroupType });
           setIsAlternativeWeek(existingClass.isAlternativeWeek || false);
 
-          if (existingClass.labGroupType === 'bothGroups') {
+          if (derivedLabGroupType === 'bothGroups') {
             // IMPORTANT: groupATeachers and groupBTeachers from backend are also populated objects
             const groupATeachersArray = existingClass.groupATeachers || [];
             const groupBTeachersArray = existingClass.groupBTeachers || [];
@@ -655,10 +699,16 @@ const AssignClassModal = ({
             });
           }
         }
+      }
       if (existingClass.classType && teachers.length > 0) {
         console.log('📞 Calling filterTeachersBasedOnClassType with:', existingClass.classType);
         filterTeachersBasedOnClassType(existingClass.classType);
       }
+      
+      // Allow onValuesChange to work normally after a brief delay
+      setTimeout(() => {
+        isInitializingEditRef.current = false;
+      }, 100);
     } else if (visible && teachers.length > 0) {
       console.log('🔄 RESET MODE - !existingClass, calling form.resetFields()');
       form.resetFields();
@@ -706,12 +756,21 @@ const AssignClassModal = ({
         ? selectedSlots
         : [slotIndex];
 
+      // Build exclusion options to avoid self-conflicts when editing an existing class
+      const exclusionOpts = {};
+      if (existingClass?._id) {
+        exclusionOpts.excludeSlotId = existingClass._id;
+      }
+      if (existingClass?.spanId) {
+        exclusionOpts.excludeSpanId = existingClass.spanId;
+      }
+
       if (values.teacherIds?.length > 0) {
         for (const teacherId of values.teacherIds) {
           for (const currentSlotId of slotsToCheck) {
             const normalizedSlotId = normalizeTimeSlotId(currentSlotId);
             conflictChecks.push(
-              routinesAPI.checkTeacherAvailability(teacherId, dayIndex, normalizedSlotId, semester)
+              routinesAPI.checkTeacherAvailability(teacherId, dayIndex, normalizedSlotId, semester, exclusionOpts)
                 .then(response => ({
                   type: 'teacher', id: teacherId, slotIndex: normalizedSlotId,
                   name: teachers.find(t => t._id === teacherId)?.fullName || 'Unknown Teacher',
@@ -727,7 +786,7 @@ const AssignClassModal = ({
         for (const currentSlotId of slotsToCheck) {
           const normalizedSlotId = normalizeTimeSlotId(currentSlotId);
           conflictChecks.push(
-            routinesAPI.checkRoomAvailability(values.roomId, dayIndex, normalizedSlotId, semester)
+            routinesAPI.checkRoomAvailability(values.roomId, dayIndex, normalizedSlotId, semester, exclusionOpts)
               .then(response => ({
                 type: 'room', id: values.roomId, slotIndex: normalizedSlotId,
                 name: rooms.find(r => r._id === values.roomId)?.name || 'Unknown Room',
@@ -895,9 +954,12 @@ const AssignClassModal = ({
   };
 
   const handleFormChange = (changedValues, allValues) => {
+    // Skip resets during edit mode initialization to prevent clearing pre-populated values
+    const isInitializing = isInitializingEditRef.current;
+    
     if (changedValues.classType !== undefined) {
       filterTeachersBasedOnClassType(changedValues.classType);
-      if (changedValues.classType !== currentClassType) {
+      if (!isInitializing && changedValues.classType !== currentClassType) {
         form.setFieldsValue({ teacherIds: [] });
         if (changedValues.classType !== 'P') {
           setLabGroupType(null);
@@ -908,12 +970,14 @@ const AssignClassModal = ({
 
     if (changedValues.labGroupType !== undefined) {
       setLabGroupType(changedValues.labGroupType);
-      form.setFieldsValue({ teacherIds: [] });
-      if (changedValues.labGroupType !== 'bothGroups') {
-        setGroupATeachers([]); setGroupBTeachers([]);
-        setGroupASubject(null); setGroupBSubject(null);
-        setGroupARoom(null); setGroupBRoom(null);
-        form.setFieldsValue({ groupATeachers: [], groupBTeachers: [], groupASubject: undefined, groupBSubject: undefined, groupARoom: undefined, groupBRoom: undefined });
+      if (!isInitializing) {
+        form.setFieldsValue({ teacherIds: [] });
+        if (changedValues.labGroupType !== 'bothGroups') {
+          setGroupATeachers([]); setGroupBTeachers([]);
+          setGroupASubject(null); setGroupBSubject(null);
+          setGroupARoom(null); setGroupBRoom(null);
+          form.setFieldsValue({ groupATeachers: [], groupBTeachers: [], groupASubject: undefined, groupBSubject: undefined, groupARoom: undefined, groupBRoom: undefined });
+        }
       }
     }
 
@@ -1176,7 +1240,40 @@ const AssignClassModal = ({
         } else {
           labClassData.isAlternativeWeek = isAlternativeWeek;
         }
-        onSave(labClassData);
+        
+        // Check for conflicts before saving lab classes too
+        const hasLabConflicts = conflicts.length > 0;
+        if (hasLabConflicts) {
+          modal.confirm({
+            title: 'Scheduling Conflicts Detected',
+            width: 600,
+            content: (
+              <div>
+                <p>One or more selected teachers or rooms have a scheduling conflict. Are you sure you want to proceed?</p>
+                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#fff2f0', borderRadius: '6px' }}>
+                  <strong>Conflict Details:</strong>
+                  {conflicts.map((conflict, index) => (
+                    <div key={index} style={{ marginTop: '8px', fontSize: '13px' }}>
+                      <strong>{conflict.name}</strong> is already assigned in <strong>{conflict.slotInfo}</strong>
+                      {conflict.conflictDetails && (
+                        <div style={{ marginLeft: '12px', color: '#666' }}>
+                          → {conflict.conflictDetails.programCode} - Sem {conflict.conflictDetails.semester} - Sec {conflict.conflictDetails.section}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ),
+            okText: 'Proceed Anyway', cancelText: 'Cancel', okType: 'danger',
+            onOk: () => {
+              console.log('🔥 Proceeding with lab conflicts - sending data with forceAssign flag');
+              onSave({ ...labClassData, forceAssign: true });
+            }
+          });
+        } else {
+          onSave(labClassData);
+        }
         return;
       }
       

@@ -45,7 +45,7 @@ const getTeacherScheduleData = async (teacherId, academicYearId) => {
     { path: 'subjectId', select: 'code name weeklyHours' },
     { path: 'roomId', select: 'name building' },
     { path: 'labGroupId', select: 'groups' }
-  ]).sort({ dayIndex: 1, slotIndex: 1 });
+  ]).sort({ dayIndex: 1, slotIndex: 1 }).lean();
 
   // Create routine object with day indices as keys and slot indices as sub-keys
   const routine = {};
@@ -278,7 +278,6 @@ const exportRoutineToPDF = async (req, res) => {
       });
     }
 
-    console.log(`📄 Generating PDF for: ${programCode} Sem ${semester} Section ${section}`);
 
     // Use unified PDF service with time slot fix
     const unifiedService = new UnifiedPDFService();
@@ -301,7 +300,6 @@ const exportRoutineToPDF = async (req, res) => {
     // Send PDF buffer
     res.send(pdfBuffer);
 
-    console.log(`✅ PDF generated successfully: ${fileName}`);
 
   } catch (error) {
     console.error('❌ PDF generation error:', error);
@@ -352,7 +350,6 @@ const exportTeacherScheduleToPDF = async (req, res) => {
       });
     }
 
-    console.log(`📄 Generating teacher schedule PDF for: ${teacherId} (${semesterGroup} semester group)`);
 
     // Get teacher information
     const Teacher = require('../models/Teacher');
@@ -385,7 +382,6 @@ const exportTeacherScheduleToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Teacher schedule PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Teacher schedule PDF generation error:', error);
@@ -422,7 +418,6 @@ const exportAllTeachersSchedulesToPDF = async (req, res) => {
   try {
     const { academicYear, semesterGroup = 'all' } = req.query;
 
-    console.log('📄 Generating all teachers schedules PDF with semester group:', semesterGroup);
 
     // Use the unified PDF service with time slot fix
     const unifiedService = new UnifiedPDFService();
@@ -445,7 +440,6 @@ const exportAllTeachersSchedulesToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ All teachers schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ All teachers schedules PDF generation error:', error);
@@ -496,7 +490,6 @@ const exportRoomScheduleToPDF = async (req, res) => {
       });
     }
 
-    console.log(`📄 Generating room schedule PDF for: ${roomId}`);
 
     // Get room information
     const Room = require('../models/Room');
@@ -529,7 +522,6 @@ const exportRoomScheduleToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Room schedule PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Room schedule PDF generation error:', error);
@@ -566,7 +558,6 @@ const exportAllRoomSchedulesToPDF = async (req, res) => {
   try {
     const { academicYear } = req.query;
 
-    console.log('📄 Generating all room schedules PDF');
 
     // Use the unified PDF service with time slot fix
     const unifiedService = new UnifiedPDFService();
@@ -581,7 +572,6 @@ const exportAllRoomSchedulesToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ All room schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ All room schedules PDF generation error:', error);
@@ -614,7 +604,6 @@ const exportTeacherWorkloadReport = async (req, res) => {
   try {
     const { teacherId } = req.params;
     const { semesterGroup = 'all' } = req.query;
-    console.log(`📊 Generating workload report for teacher: ${teacherId} (${semesterGroup} semester group)`);
 
     // Get teacher information
     const teacher = await Teacher.findById(teacherId);
@@ -645,7 +634,6 @@ const exportTeacherWorkloadReport = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Teacher workload report PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Teacher workload report PDF generation error:', error);
@@ -677,7 +665,6 @@ const exportTeacherWorkloadReport = async (req, res) => {
 const exportRoomUtilizationReport = async (req, res) => {
   try {
     const { roomId } = req.params;
-    console.log(`🏢 Generating utilization report for room: ${roomId}`);
 
     // Get room information
     const room = await Room.findById(roomId);
@@ -708,7 +695,6 @@ const exportRoomUtilizationReport = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Room utilization report PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Room utilization report PDF generation error:', error);
@@ -724,7 +710,6 @@ const exportRoomUtilizationReport = async (req, res) => {
 const exportBuildingRoomsSchedulesToPDF = async (req, res) => {
   try {
     const { buildingId } = req.params;
-    console.log(`🏢 Generating building rooms schedules PDF for building: ${buildingId}`);
 
     // For now, use the all rooms export (can be enhanced later to filter by building)
     const unifiedService = new UnifiedPDFService();
@@ -746,7 +731,6 @@ const exportBuildingRoomsSchedulesToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Building rooms schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Building rooms schedules PDF generation error:', error);
@@ -762,7 +746,6 @@ const exportBuildingRoomsSchedulesToPDF = async (req, res) => {
 const exportEnhancedAllTeachersSchedules = async (req, res) => {
   try {
     const { semesterGroup = 'all' } = req.query;
-    console.log('📚 Generating enhanced all teachers schedules PDF with semester group:', semesterGroup);
 
     const unifiedService = new UnifiedPDFService();
     const pdfBuffer = await unifiedService.generateAllTeachersSchedulesPDF(semesterGroup);
@@ -784,7 +767,6 @@ const exportEnhancedAllTeachersSchedules = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Enhanced all teachers schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Enhanced all teachers schedules PDF generation error:', error);
@@ -798,7 +780,6 @@ const exportEnhancedAllTeachersSchedules = async (req, res) => {
 
 const exportEnhancedAllRoomsSchedules = async (req, res) => {
   try {
-    console.log('🏢 Generating enhanced all rooms schedules PDF...');
 
     const unifiedService = new UnifiedPDFService();
     const pdfBuffer = await unifiedService.generateAllRoomsSchedulePDF();
@@ -819,7 +800,6 @@ const exportEnhancedAllRoomsSchedules = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Enhanced all rooms schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Enhanced all rooms schedules PDF generation error:', error);

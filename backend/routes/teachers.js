@@ -49,6 +49,7 @@ router.post(
   requireAdmin,
   [
     check('fullName', 'Full name is required').not().isEmpty(),
+    check('shortName', 'Short name is required').not().isEmpty(),
     check('email', 'Please include a valid email').isEmail(),
     check('departmentId', 'Department ID is required').not().isEmpty(),
     check('designation', 'Designation is required').not().isEmpty(),

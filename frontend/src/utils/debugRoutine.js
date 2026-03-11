@@ -74,8 +74,8 @@ export const flushAllCaches = (queryClient) => {
     console.log('✅ Successfully cleared the entire React Query cache');
     
     // Force immediate refetch of critical queries
-    queryClient.refetchQueries(['teacher-schedule-from-routine']);
-    queryClient.refetchQueries(['roomSchedule']);
+    queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine'] });
+    queryClient.refetchQueries({ queryKey: ['roomSchedule'] });
     console.log('✅ Triggered refetch of critical queries');
     
     return true;
@@ -85,8 +85,8 @@ export const flushAllCaches = (queryClient) => {
   }
 };
 
-// Add this function to the window for easy console debugging
-if (typeof window !== 'undefined') {
+// Only expose debug utilities in development
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.debugRoutineSystem = {
     fetchTeacherScheduleDirectly,
     fetchRoomScheduleDirectly,

@@ -779,7 +779,7 @@ const RoomManagement = () => {
           <Button
             key="submit"
             type="primary"
-            loading={createMutation.isLoading || updateMutation.isLoading}
+            loading={createMutation.isPending || updateMutation.isPending}
             onClick={handleSave}
           >
             {editingRoom ? 'Update' : 'Create'}

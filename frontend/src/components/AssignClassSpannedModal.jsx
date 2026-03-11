@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   Form,
@@ -64,6 +64,7 @@ const AssignClassSpannedModal = ({
   const [duration, setDuration] = useState(1);
   const [spannedSlots, setSpannedSlots] = useState([]);
   const [spannedConflicts, setSpannedConflicts] = useState([]);
+  const conflictCheckTimeoutRef = useRef(null);
 
   // Use App.useApp for proper context support in modals
   const { modal } = App.useApp();
@@ -178,22 +179,37 @@ const AssignClassSpannedModal = ({
     try {
       const conflictChecks = [];
 
+      // Build lookup maps once to avoid repeated .find() calls
+      const teacherMap = new Map(teachers.map(t => [t._id, t]));
+      const roomMap = new Map(rooms.map(r => [r._id, r]));
+
+      const parseAvailability = (response) => {
+        const data = response.data?.data || response.data;
+        return {
+          available: data.isAvailable !== undefined ? data.isAvailable : data.available,
+          conflictDetails: data.conflict || data.conflictDetails
+        };
+      };
+
       // Check teacher availability
       if (values.teacherIds?.length > 0) {
         for (const teacherId of values.teacherIds) {
           conflictChecks.push(
-            schedulesAPI.checkTeacherAvailability(teacherId, dayIndex, slotIndex, semester)
-              .then(response => ({
-                type: 'teacher',
-                id: teacherId,
-                name: teachers.find(t => t._id === teacherId)?.fullName || 'Unknown Teacher',
-                available: response.data.available,
-                conflictDetails: response.data.conflictDetails
-              }))
+            routinesAPI.checkTeacherAvailability(teacherId, dayIndex, slotIndex, semester)
+              .then(response => {
+                const { available, conflictDetails } = parseAvailability(response);
+                return {
+                  type: 'teacher',
+                  id: teacherId,
+                  name: teacherMap.get(teacherId)?.fullName || 'Unknown Teacher',
+                  available,
+                  conflictDetails
+                };
+              })
               .catch(() => ({
                 type: 'teacher',
                 id: teacherId,
-                name: teachers.find(t => t._id === teacherId)?.fullName || 'Unknown Teacher',
+                name: teacherMap.get(teacherId)?.fullName || 'Unknown Teacher',
                 available: true
               }))
           );
@@ -204,17 +220,20 @@ const AssignClassSpannedModal = ({
       if (values.roomId) {
         conflictChecks.push(
           routinesAPI.checkRoomAvailability(values.roomId, dayIndex, slotIndex, semester)
-            .then(response => ({
-              type: 'room',
-              id: values.roomId,
-              name: rooms.find(r => r._id === values.roomId)?.name || 'Unknown Room',
-              available: response.data.available,
-              conflictDetails: response.data.conflictDetails
-            }))
+            .then(response => {
+              const { available, conflictDetails } = parseAvailability(response);
+              return {
+                type: 'room',
+                id: values.roomId,
+                name: roomMap.get(values.roomId)?.name || 'Unknown Room',
+                available,
+                conflictDetails
+              };
+            })
             .catch(() => ({
               type: 'room',
               id: values.roomId,
-              name: rooms.find(r => r._id === values.roomId)?.name || 'Unknown Room',
+              name: roomMap.get(values.roomId)?.name || 'Unknown Room',
               available: true
             }))
         );
@@ -255,20 +274,23 @@ const AssignClassSpannedModal = ({
           if (values.teacherIds?.length > 0) {
             for (const teacherId of values.teacherIds) {
               spannedConflictChecks.push(
-                schedulesAPI.checkTeacherAvailability(teacherId, dayIndex, currentSlotId, semester)
-                  .then(response => ({
-                    type: 'teacher',
-                    id: teacherId,
-                    slotIndex: i,
-                    name: teachers.find(t => t._id === teacherId)?.fullName || 'Unknown Teacher',
-                    available: response.data.available,
-                    conflictDetails: response.data.conflictDetails
-                  }))
+                routinesAPI.checkTeacherAvailability(teacherId, dayIndex, currentSlotId, semester)
+                  .then(response => {
+                    const { available, conflictDetails } = parseAvailability(response);
+                    return {
+                      type: 'teacher',
+                      id: teacherId,
+                      slotIndex: i,
+                      name: teacherMap.get(teacherId)?.fullName || 'Unknown Teacher',
+                      available,
+                      conflictDetails
+                    };
+                  })
                   .catch(() => ({
                     type: 'teacher',
                     id: teacherId,
                     slotIndex: i,
-                    name: teachers.find(t => t._id === teacherId)?.fullName || 'Unknown Teacher',
+                    name: teacherMap.get(teacherId)?.fullName || 'Unknown Teacher',
                     available: true
                   }))
               );
@@ -279,19 +301,22 @@ const AssignClassSpannedModal = ({
           if (values.roomId) {
             spannedConflictChecks.push(
               routinesAPI.checkRoomAvailability(values.roomId, dayIndex, currentSlotId, semester)
-                .then(response => ({
-                  type: 'room',
-                  id: values.roomId,
-                  slotIndex: i,
-                  name: rooms.find(r => r._id === values.roomId)?.name || 'Unknown Room',
-                  available: response.data.available,
-                  conflictDetails: response.data.conflictDetails
-                }))
+                .then(response => {
+                  const { available, conflictDetails } = parseAvailability(response);
+                  return {
+                    type: 'room',
+                    id: values.roomId,
+                    slotIndex: i,
+                    name: roomMap.get(values.roomId)?.name || 'Unknown Room',
+                    available,
+                    conflictDetails
+                  };
+                })
                 .catch(() => ({
                   type: 'room',
                   id: values.roomId,
                   slotIndex: i,
-                  name: rooms.find(r => r._id === values.roomId)?.name || 'Unknown Room',
+                  name: roomMap.get(values.roomId)?.name || 'Unknown Room',
                   available: true
                 }))
             );
@@ -318,9 +343,11 @@ const AssignClassSpannedModal = ({
       setDuration(newDuration);
     }
 
-    // Debounce conflict checking
-    const timeoutId = setTimeout(() => checkConflicts(allValues), 500);
-    return () => clearTimeout(timeoutId);
+    // Properly debounce conflict checking using ref to avoid memory leaks
+    if (conflictCheckTimeoutRef.current) {
+      clearTimeout(conflictCheckTimeoutRef.current);
+    }
+    conflictCheckTimeoutRef.current = setTimeout(() => checkConflicts(allValues), 500);
   };
 
   const handleSubmit = async () => {
@@ -361,7 +388,7 @@ const AssignClassSpannedModal = ({
             content: 'There are scheduling conflicts. Do you want to proceed anyway?',
             okText: 'Proceed',
             cancelText: 'Cancel',
-            onOk: () => onSave(values)
+            onOk: () => onSave({ ...values, forceAssign: true })
           });
         } else {
           onSave(values);
@@ -375,7 +402,7 @@ const AssignClassSpannedModal = ({
             content: `There are scheduling conflicts in ${spannedConflicts.length + conflicts.length} periods. Do you want to proceed anyway?`,
             okText: 'Proceed',
             cancelText: 'Cancel',
-            onOk: () => onSaveSpanned(values, spannedSlots)
+            onOk: () => onSaveSpanned({ ...values, forceAssign: true }, spannedSlots)
           });
         } else {
           onSaveSpanned(values, spannedSlots);

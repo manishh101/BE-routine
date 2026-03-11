@@ -28,9 +28,11 @@ const TeacherScheduleManagerContent = () => {
   useRoutineChangeListener(queryClient, (changeData) => {
     console.log('🔔 Teacher schedule detected routine change:', changeData);
     
-    // If this change affects the selected teacher, force refresh
-    if (selectedTeacher && changeData.teacherIds && changeData.teacherIds.includes(selectedTeacher)) {
-      console.log('🔄 Forcing teacher schedule refresh due to relevant change');
+    // Always force refresh when any routine change happens
+    // The teacher might be affected even if their ID is not in the change data
+    // (e.g., when a class is cleared, the teacher ID might not be included)
+    if (selectedTeacher) {
+      console.log('🔄 Forcing teacher schedule refresh due to routine change');
       setRefreshKey(prev => prev + 1);
     }
   });
@@ -132,8 +134,9 @@ const TeacherScheduleManagerContent = () => {
       }
     },
     enabled: !!selectedTeacher,
-    staleTime: 1 * 60 * 1000,
-    refetchInterval: 2 * 60 * 1000,
+    staleTime: 0, // No stale time - always fetch fresh for real-time sync
+    gcTime: 30000, // Keep in garbage collection for 30s
+    refetchOnWindowFocus: true,
   });
 
   // Fetch time slots from real API (same as routine manager)
@@ -145,7 +148,7 @@ const TeacherScheduleManagerContent = () => {
 
   const teachers = teachersData?.data || [];
   const selectedTeacherInfo = teachers.find(t => t._id === selectedTeacher);
-  const timeSlots = timeSlotsData?.data?.data || [];
+  const timeSlots = timeSlotsData?.data || [];
 
   // Transform teacher schedule data to match EXACT routine manager format
   const routineData = React.useMemo(() => {
@@ -308,7 +311,7 @@ const TeacherScheduleManagerContent = () => {
     setSelectedTeacher(teacherId);
     
     // First invalidate any existing queries
-    queryClient.invalidateQueries(['teacher-schedule-from-routine', teacherId]);
+    queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine', teacherId] });
     
     // Check if this is teacher BA to enable special debugging
     await checkForTeacherBA(teacherId);

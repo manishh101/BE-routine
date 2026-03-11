@@ -76,7 +76,7 @@ const DepartmentManagement = () => {
     onSuccess: (response) => {
       const departmentName = response.data?.name || 'Department';
       message.success(`${departmentName} created successfully! 🎉`);
-      queryClient.invalidateQueries(['departments']);
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
       setIsModalVisible(false);
       form.resetFields();
     },
@@ -93,7 +93,7 @@ const DepartmentManagement = () => {
     mutationFn: ({ id, data }) => departmentsAPI.updateDepartment(id, data),
     onSuccess: () => {
       message.success('Department updated successfully');
-      queryClient.invalidateQueries(['departments']);
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
       setIsModalVisible(false);
       setEditingDepartment(null);
       form.resetFields();
@@ -108,7 +108,7 @@ const DepartmentManagement = () => {
     mutationFn: (id) => departmentsAPI.deleteDepartment(id),
     onSuccess: () => {
       message.success('Department deleted successfully! 🗑️');
-      queryClient.invalidateQueries(['departments']);
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
     },
     onError: (error) => {
       const errorMessage = error.response?.data?.msg || 
@@ -262,7 +262,7 @@ const DepartmentManagement = () => {
               danger
               icon={<DeleteOutlined />}
               style={{ padding: '4px 8px' }}
-              loading={deleteMutation.isLoading}
+              loading={deleteMutation.isPending}
             >
               Delete
             </Button>
@@ -418,7 +418,7 @@ const DepartmentManagement = () => {
           setEditingDepartment(null);
           form.resetFields();
         }}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={600}
       >
         <Form

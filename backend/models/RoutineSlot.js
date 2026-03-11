@@ -395,6 +395,12 @@ routineSlotSchema.index({
 }, { unique: true });
 routineSlotSchema.index({ programCode: 1, semester: 1, section: 1 });
 routineSlotSchema.index({ teacherIds: 1 });
+// Compound index for conflict detection: teacher availability checks
+routineSlotSchema.index({ dayIndex: 1, slotIndex: 1, teacherIds: 1, isActive: 1 });
+// Compound index for conflict detection: room availability checks
+routineSlotSchema.index({ dayIndex: 1, slotIndex: 1, roomId: 1, isActive: 1 });
+// Compound index for fetching routine by program/semester/section
+routineSlotSchema.index({ programCode: 1, semester: 1, section: 1, isActive: 1, dayIndex: 1, slotIndex: 1 });
 
 // Instance methods
 routineSlotSchema.methods.isAlternateWeek = function() {
@@ -459,12 +465,18 @@ routineSlotSchema.statics.findConflicts = function(dayIndex, slotIndex, teacherI
     ]
   };
   
-  // Add recurrence pattern checking if provided
+  // Add recurrence pattern filtering if provided
+  // Only match slots that would actually conflict based on their recurrence pattern
   if (weekPattern) {
-    query.$or.push(
-      { 'recurrence.type': 'weekly' },
-      { 'recurrence.pattern': weekPattern }
-    );
+    // A slot conflicts if it's weekly (always runs) OR has the same alternate pattern
+    query.$and = query.$and || [];
+    query.$and.push({
+      $or: [
+        { 'recurrence.type': 'weekly' },
+        { 'recurrence.type': { $exists: false } },
+        { 'recurrence.pattern': weekPattern }
+      ]
+    });
   }
   
   return this.find(query);
@@ -526,18 +538,36 @@ routineSlotSchema.pre('save', async function(next) {
     const Room = mongoose.model('Room');
     const Teacher = mongoose.model('Teacher');
     
-    const [program, room] = await Promise.all([
-      Program.findById(this.programId),
-      Room.findById(this.roomId)
-    ]);
+    // Build all lookups in parallel
+    const lookups = [
+      Program.findById(this.programId).lean(),
+      Room.findById(this.roomId).lean()
+    ];
+    
+    // Add subject lookup
+    if (this.isElectiveClass && this.subjectIds && this.subjectIds.length > 0) {
+      lookups.push(Subject.find({ _id: { $in: this.subjectIds } }).lean());
+    } else if (this.subjectId) {
+      lookups.push(Subject.findById(this.subjectId).lean());
+    } else {
+      lookups.push(Promise.resolve(null));
+    }
+    
+    // Add teacher lookup
+    if (this.teacherIds && this.teacherIds.length > 0) {
+      lookups.push(Teacher.find({ _id: { $in: this.teacherIds }, isActive: true }).lean());
+    } else {
+      lookups.push(Promise.resolve([]));
+    }
+    
+    const [program, room, subjectResult, teachers] = await Promise.all(lookups);
     
     // Handle subjects (single or multiple for electives)
     let subjects = [];
-    if (this.isElectiveClass && this.subjectIds && this.subjectIds.length > 0) {
-      subjects = await Subject.find({ _id: { $in: this.subjectIds } });
-    } else if (this.subjectId) {
-      const subject = await Subject.findById(this.subjectId);
-      if (subject) subjects = [subject];
+    if (this.isElectiveClass && Array.isArray(subjectResult)) {
+      subjects = subjectResult;
+    } else if (subjectResult && !Array.isArray(subjectResult)) {
+      subjects = [subjectResult];
     }
     
     if (program) {
@@ -566,9 +596,8 @@ routineSlotSchema.pre('save', async function(next) {
       this.roomName_display = room.name; // Legacy field
     }
     
-    // Get teacher names
-    if (this.teacherIds && this.teacherIds.length > 0) {
-      const teachers = await Teacher.find({ _id: { $in: this.teacherIds }, isActive: true });
+    // Set teacher display names (already fetched in parallel above)
+    if (teachers && teachers.length > 0) {
       this.display.teacherNames = teachers.map(t => t.shortName);
       this.teacherShortNames_display = teachers.map(t => t.shortName); // Legacy field
     }
@@ -585,7 +614,7 @@ routineSlotSchema.pre('save', async function(next) {
   // Auto-populate lab group name if labGroupId is set
   if (this.labGroupId && !this.labGroupName) {
     const LabGroup = mongoose.model('LabGroup');
-    const labGroup = await LabGroup.findById(this.labGroupId);
+    const labGroup = await LabGroup.findById(this.labGroupId).lean();
     if (labGroup) {
       // Find the specific group within the lab group
       const group = labGroup.groups.find(g => 

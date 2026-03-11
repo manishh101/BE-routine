@@ -17,9 +17,9 @@ exports.createSubject = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.code === 11000) {
-      return res.status(400).json({ msg: 'Subject with this code already exists' });
+      return res.status(400).json({ message: 'Subject with this code already exists' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -40,7 +40,7 @@ exports.createSubjectsBulk = async (req, res) => {
     } else {
       return res.status(400).json({ 
         success: false,
-        msg: 'Request body must be an array of subjects or an object with "subjects" array property' 
+        message: 'Request body must be an array of subjects or an object with "subjects" array property' 
       });
     }
 
@@ -48,7 +48,7 @@ exports.createSubjectsBulk = async (req, res) => {
     if (subjectsArray.length === 0) {
       return res.status(400).json({ 
         success: false,
-        msg: 'At least one subject is required' 
+        message: 'At least one subject is required' 
       });
     }
 
@@ -68,7 +68,7 @@ exports.createSubjectsBulk = async (req, res) => {
     if (errors.length > 0) {
       return res.status(400).json({ 
         success: false,
-        msg: 'Validation errors',
+        message: 'Validation errors',
         errors: errors 
       });
     }
@@ -149,7 +149,7 @@ exports.createSubjectsBulk = async (req, res) => {
     console.error('Bulk subject creation error:', err);
     res.status(500).json({
       success: false,
-      msg: 'Server error during bulk creation',
+      message: 'Server error during bulk creation',
       error: err.message
     });
   }
@@ -160,11 +160,11 @@ exports.createSubjectsBulk = async (req, res) => {
 // @access  Private
 exports.getSubjects = async (req, res) => {
   try {
-    const subjects = await Subject.find();
+    const subjects = await Subject.find().lean();
     res.json(subjects);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -176,11 +176,11 @@ exports.getSubjectsByProgramId = async (req, res) => {
     // Find subjects where programId array contains the requested program ID
     const subjects = await Subject.find({ 
       programId: { $in: [req.params.programId] } 
-    }).populate('programId', 'name code');
+    }).populate('programId', 'name code').lean();
     res.json(subjects);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -189,11 +189,11 @@ exports.getSubjectsByProgramId = async (req, res) => {
 // @access  Private
 exports.getSubjectsBySemester = async (req, res) => {
   try {
-    const subjects = await Subject.find({ semester: req.params.semester }).populate('programId', 'name code');
+    const subjects = await Subject.find({ semester: req.params.semester }).populate('programId', 'name code').lean();
     res.json(subjects);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -202,19 +202,24 @@ exports.getSubjectsBySemester = async (req, res) => {
 // @access  Private
 exports.getSubjectById = async (req, res) => {
   try {
-    const subject = await Subject.findById(req.params.id).populate('programId', 'name code');
-    
-    if (!subject) {
-      return res.status(404).json({ msg: 'Subject not found' });
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Subject ID format' });
     }
 
-    res.json(subject);
+    const subject = await Subject.findById(req.params.id).populate('programId', 'name code').lean();
+    
+    if (!subject) {
+      return res.status(404).json({ success: false, message: 'Subject not found' });
+    }
+
+    res.json({ success: true, data: subject });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Subject not found' });
+      return res.status(404).json({ success: false, message: 'Subject not found' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -224,14 +229,19 @@ exports.getSubjectById = async (req, res) => {
 exports.updateSubject = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
   }
 
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Subject ID format' });
+    }
+
     let subject = await Subject.findById(req.params.id);
     
     if (!subject) {
-      return res.status(404).json({ msg: 'Subject not found' });
+      return res.status(404).json({ success: false, message: 'Subject not found' });
     }
 
     subject = await Subject.findByIdAndUpdate(
@@ -240,13 +250,13 @@ exports.updateSubject = async (req, res) => {
       { new: true }
     );
 
-    res.json(subject);
+    res.json({ success: true, data: subject });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Subject not found' });
+      return res.status(404).json({ success: false, message: 'Subject not found' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -255,21 +265,26 @@ exports.updateSubject = async (req, res) => {
 // @access  Private/Admin
 exports.deleteSubject = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Subject ID format' });
+    }
+
     const subject = await Subject.findById(req.params.id);
     
     if (!subject) {
-      return res.status(404).json({ msg: 'Subject not found' });
+      return res.status(404).json({ success: false, message: 'Subject not found' });
     }
 
     await Subject.findByIdAndDelete(req.params.id);
 
-    res.json({ msg: 'Subject removed' });
+    res.json({ success: true, message: 'Subject removed' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Subject not found' });
+      return res.status(404).json({ success: false, message: 'Subject not found' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -290,7 +305,7 @@ exports.deleteSubjectsBulk = async (req, res) => {
     } else {
       return res.status(400).json({ 
         success: false,
-        msg: 'Request body must be an array of subject IDs or an object with "subjectIds" array property' 
+        message: 'Request body must be an array of subject IDs or an object with "subjectIds" array property' 
       });
     }
 
@@ -298,7 +313,7 @@ exports.deleteSubjectsBulk = async (req, res) => {
     if (subjectIds.length === 0) {
       return res.status(400).json({ 
         success: false,
-        msg: 'At least one subject ID is required' 
+        message: 'At least one subject ID is required' 
       });
     }
 
@@ -314,7 +329,7 @@ exports.deleteSubjectsBulk = async (req, res) => {
     if (invalidIds.length > 0) {
       return res.status(400).json({ 
         success: false,
-        msg: 'Invalid subject IDs',
+        message: 'Invalid subject IDs',
         errors: invalidIds 
       });
     }
@@ -327,7 +342,7 @@ exports.deleteSubjectsBulk = async (req, res) => {
     if (existingSubjects.length === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'No subjects found with the provided IDs',
+        message: 'No subjects found with the provided IDs',
         notFoundIds: notFoundIds
       });
     }
@@ -348,7 +363,7 @@ exports.deleteSubjectsBulk = async (req, res) => {
     console.error('Bulk subject deletion error:', err);
     res.status(500).json({
       success: false,
-      msg: 'Server error during bulk deletion',
+      message: 'Server error during bulk deletion',
       error: err.message
     });
   }
@@ -366,7 +381,7 @@ exports.deleteSubjectsByProgramId = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ 
         success: false,
-        msg: 'Invalid program ID format' 
+        message: 'Invalid program ID format' 
       });
     }
 
@@ -378,7 +393,7 @@ exports.deleteSubjectsByProgramId = async (req, res) => {
     if (subjectsToDelete.length === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'No subjects found for the specified program ID',
+        message: 'No subjects found for the specified program ID',
         programId: programId
       });
     }
@@ -441,7 +456,7 @@ exports.deleteSubjectsByProgramId = async (req, res) => {
     console.error('Delete subjects by program ID error:', err);
     res.status(500).json({
       success: false,
-      msg: 'Server error during program-based deletion',
+      message: 'Server error during program-based deletion',
       error: err.message
     });
   }
@@ -459,7 +474,7 @@ exports.getSharedSubjects = async (req, res) => {
     res.json(sharedSubjects);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -471,7 +486,7 @@ exports.getSubjectsByPrograms = async (req, res) => {
     const { programIds } = req.body;
     
     if (!programIds || !Array.isArray(programIds)) {
-      return res.status(400).json({ msg: 'programIds array is required' });
+      return res.status(400).json({ message: 'programIds array is required' });
     }
 
     const subjects = await Subject.findByPrograms(programIds)
@@ -481,6 +496,6 @@ exports.getSubjectsByPrograms = async (req, res) => {
     res.json(subjects);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

@@ -26,7 +26,7 @@ exports.createSectionElectiveChoice = async (req, res) => {
 
     if (sectionChoice) {
       return res.status(400).json({ 
-        msg: 'Section elective choice already exists. Use PUT to update.' 
+        message: 'Section elective choice already exists. Use PUT to update.' 
       });
     }
 
@@ -35,7 +35,7 @@ exports.createSectionElectiveChoice = async (req, res) => {
       const electiveGroup = await ElectiveGroup.findById(choice.electiveGroupId);
       if (!electiveGroup) {
         return res.status(400).json({ 
-          msg: `Elective group ${choice.electiveGroupId} not found` 
+          message: `Elective group ${choice.electiveGroupId} not found` 
         });
       }
 
@@ -45,13 +45,13 @@ exports.createSectionElectiveChoice = async (req, res) => {
       
       if (!subjectInGroup) {
         return res.status(400).json({ 
-          msg: `Subject ${choice.selectedSubjectId} not available in elective group` 
+          message: `Subject ${choice.selectedSubjectId} not available in elective group` 
         });
       }
 
       if (!subjectInGroup.isAvailable) {
         return res.status(400).json({ 
-          msg: `Subject ${choice.selectedSubjectId} is not available for selection` 
+          message: `Subject ${choice.selectedSubjectId} is not available for selection` 
         });
       }
     }
@@ -83,7 +83,7 @@ exports.createSectionElectiveChoice = async (req, res) => {
     res.status(201).json(sectionChoice);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -106,12 +106,13 @@ exports.getSectionElectiveChoices = async (req, res) => {
       .populate('academicYearId', 'title nepaliYear')
       .populate('choices.electiveGroupId', 'name code')
       .populate('choices.selectedSubjectId', 'code name credits weeklyHours')
-      .sort({ programId: 1, semester: 1, section: 1 });
+      .sort({ programId: 1, semester: 1, section: 1 })
+      .lean();
 
     res.json(sectionChoices);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -127,16 +128,16 @@ exports.getSectionElectiveChoiceById = async (req, res) => {
       .populate('choices.selectedSubjectId', 'code name description credits weeklyHours');
 
     if (!sectionChoice) {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
 
     res.json(sectionChoice);
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -153,13 +154,13 @@ exports.updateSectionElectiveChoice = async (req, res) => {
     let sectionChoice = await SectionElectiveChoice.findById(req.params.id);
     
     if (!sectionChoice) {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
 
     // Only allow updates if status is Draft or Rejected
     if (!['Draft', 'Rejected'].includes(sectionChoice.status)) {
       return res.status(400).json({ 
-        msg: 'Cannot update choices that have been submitted or approved' 
+        message: 'Cannot update choices that have been submitted or approved' 
       });
     }
 
@@ -170,7 +171,7 @@ exports.updateSectionElectiveChoice = async (req, res) => {
           const electiveGroup = await ElectiveGroup.findById(choice.electiveGroupId);
           if (!electiveGroup) {
             return res.status(400).json({ 
-              msg: `Elective group ${choice.electiveGroupId} not found` 
+              message: `Elective group ${choice.electiveGroupId} not found` 
             });
           }
 
@@ -180,7 +181,7 @@ exports.updateSectionElectiveChoice = async (req, res) => {
           
           if (!subjectInGroup || !subjectInGroup.isAvailable) {
             return res.status(400).json({ 
-              msg: `Subject ${choice.selectedSubjectId} not available in elective group` 
+              message: `Subject ${choice.selectedSubjectId} not available in elective group` 
             });
           }
         }
@@ -202,9 +203,9 @@ exports.updateSectionElectiveChoice = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -216,12 +217,12 @@ exports.submitSectionElectiveChoice = async (req, res) => {
     const sectionChoice = await SectionElectiveChoice.findById(req.params.id);
     
     if (!sectionChoice) {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
 
     if (sectionChoice.status !== 'Draft') {
       return res.status(400).json({ 
-        msg: 'Only draft choices can be submitted' 
+        message: 'Only draft choices can be submitted' 
       });
     }
 
@@ -243,7 +244,7 @@ exports.submitSectionElectiveChoice = async (req, res) => {
       
       if (!hasChoice) {
         return res.status(400).json({ 
-          msg: `Missing selection for mandatory elective group: ${mandatoryGroup.name}` 
+          message: `Missing selection for mandatory elective group: ${mandatoryGroup.name}` 
         });
       }
     }
@@ -255,9 +256,9 @@ exports.submitSectionElectiveChoice = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -271,12 +272,12 @@ exports.approveSectionElectiveChoice = async (req, res) => {
     const sectionChoice = await SectionElectiveChoice.findById(req.params.id);
     
     if (!sectionChoice) {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
 
     if (sectionChoice.status !== 'Submitted') {
       return res.status(400).json({ 
-        msg: 'Only submitted choices can be approved or rejected' 
+        message: 'Only submitted choices can be approved or rejected' 
       });
     }
 
@@ -288,7 +289,7 @@ exports.approveSectionElectiveChoice = async (req, res) => {
     } else {
       if (!rejectionReason) {
         return res.status(400).json({ 
-          msg: 'Rejection reason is required when rejecting' 
+          message: 'Rejection reason is required when rejecting' 
         });
       }
       sectionChoice.status = 'Rejected';
@@ -302,9 +303,9 @@ exports.approveSectionElectiveChoice = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -316,23 +317,23 @@ exports.deleteSectionElectiveChoice = async (req, res) => {
     const sectionChoice = await SectionElectiveChoice.findById(req.params.id);
     
     if (!sectionChoice) {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
 
     if (sectionChoice.status === 'Approved') {
       return res.status(400).json({ 
-        msg: 'Cannot delete approved elective choices' 
+        message: 'Cannot delete approved elective choices' 
       });
     }
 
     await SectionElectiveChoice.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Section elective choice deleted successfully' });
+    res.json({ success: false, message: 'Section elective choice deleted successfully' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Section elective choice not found' });
+      return res.status(404).json({ success: false, message: 'Section elective choice not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -345,7 +346,7 @@ exports.getElectiveChoicesSummary = async (req, res) => {
     
     if (!programId || !academicYearId || !semester) {
       return res.status(400).json({ 
-        msg: 'Program ID, academic year ID, and semester are required' 
+        message: 'Program ID, academic year ID, and semester are required' 
       });
     }
 
@@ -384,6 +385,6 @@ exports.getElectiveChoicesSummary = async (req, res) => {
     res.json(summary);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

@@ -100,7 +100,6 @@ api.interceptors.request.use(
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Success: ${response.config.url}`);
     return response;
   },
   async (error) => {
@@ -212,28 +211,8 @@ api.interceptors.response.use(
 );
 
 // Helper function to queue API requests to prevent rate limiting
-const queuedRequest = (requestFn, description = 'API request') => {
-  return requestQueue.add(async () => {
-    const startTime = performance.now();
-    console.log(`Starting ${description}`);
-    
-    try {
-      const response = await requestFn();
-      const endTime = performance.now();
-      console.log(`Successfully completed ${description} in ${endTime - startTime}ms`);
-      return response;
-    } catch (error) {
-      const endTime = performance.now();
-      console.error(`Error in ${description} after ${endTime - startTime}ms:`, {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        timeout: error.code === 'ECONNABORTED'
-      });
-      throw error;
-    }
-  });
+const queuedRequest = (requestFn) => {
+  return requestQueue.add(requestFn);
 };
 
 // Auth API
@@ -241,32 +220,24 @@ export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/users', userData),
   getProfile: () => api.get('/auth/me'),
-  refreshToken: () => api.post('/auth/refresh-token'),
   logout: () => {
-    // Clear tokens on logout
+    // Clear local auth state on logout (no server-side session to invalidate)
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
     }
-    return api.post('/auth/logout');
   }
 };
 
 // Teachers API
 export const teachersAPI = {
-  getAllTeachers: () => {
-    return queuedRequest(
-      () => api.get('/teachers'),
-      'fetching all teachers'
-    );
-  },
-  
   getTeachers: () => {
-    return queuedRequest(
-      () => api.get('/teachers'),
-      'fetching teachers'
-    );
+    return queuedRequest(() => api.get('/teachers'));
+  },
+
+  // Alias for backward compatibility
+  getAllTeachers: () => {
+    return queuedRequest(() => api.get('/teachers'));
   },
   
   getTeacher: (id) => {
@@ -299,40 +270,7 @@ export const teachersAPI = {
   
   getTeacherSchedule: (id) => {
     return queuedRequest(
-      () => api.get(`/teachers/${id}/schedule`).then(response => {
-        if (response.data) {
-          console.log('Teacher schedule response structure:', {
-            hasSuccessProperty: 'success' in response.data,
-            hasDataProperty: 'data' in response.data,
-            success: response.data.success,
-            dataType: typeof response.data.data,
-            topLevelKeys: Object.keys(response.data)
-          });
-          
-          // Check nested routine location - backend now returns routine directly
-          if (response.data.data?.routine) {
-            const routine = response.data.data.routine;
-            console.log('Found routine in response.data.data', {
-              dayCount: Object.keys(routine).length,
-              firstDay: Object.keys(routine)[0],
-              sampleSlots: Object.keys(routine)[0] ? Object.keys(routine[Object.keys(routine)[0]]).length : 0
-            });
-          } else if (response.data.routine) {
-            const routine = response.data.routine;
-            console.log('Found routine directly in response.data', {
-              dayCount: Object.keys(routine).length,
-              firstDay: Object.keys(routine)[0],
-              sampleSlots: Object.keys(routine)[0] ? Object.keys(routine[Object.keys(routine)[0]]).length : 0
-            });
-          } else {
-            console.warn('Could not find routine object in response - teacher may have no classes');
-          }
-        }
-        
-        // Backend now returns { success: true, data: { routine: {}, ... } }
-        return response.data;
-      }),
-      `fetching schedule for teacher ${id}`
+      () => api.get(`/teachers/${id}/schedule`).then(response => response.data)
     );
   },
   
@@ -433,7 +371,7 @@ export const routinesAPI = {
       }
     });
   },
-  checkTeacherAvailability: (teacherId, dayIndex, slotIndex, semester = null) => {
+  checkTeacherAvailability: (teacherId, dayIndex, slotIndex, semester = null, { excludeSlotId, excludeSpanId } = {}) => {
     const params = new URLSearchParams({
       dayIndex: dayIndex.toString(),
       slotIndex: slotIndex.toString()
@@ -441,15 +379,27 @@ export const routinesAPI = {
     if (semester !== null) {
       params.append('semester', semester.toString());
     }
+    if (excludeSlotId) {
+      params.append('excludeSlotId', excludeSlotId.toString());
+    }
+    if (excludeSpanId) {
+      params.append('excludeSpanId', excludeSpanId.toString());
+    }
     return api.get(`/routines/teachers/${teacherId}/availability?${params.toString()}`);
   },
-  checkRoomAvailability: (roomId, dayIndex, slotIndex, semester = null) => {
+  checkRoomAvailability: (roomId, dayIndex, slotIndex, semester = null, { excludeSlotId, excludeSpanId } = {}) => {
     const params = new URLSearchParams({
       dayIndex: dayIndex.toString(),
       slotIndex: slotIndex.toString()
     });
     if (semester !== null) {
       params.append('semester', semester.toString());
+    }
+    if (excludeSlotId) {
+      params.append('excludeSlotId', excludeSlotId.toString());
+    }
+    if (excludeSpanId) {
+      params.append('excludeSpanId', excludeSpanId.toString());
     }
     return api.get(`/routines/rooms/${roomId}/availability?${params.toString()}`);
   },
@@ -480,7 +430,6 @@ export const subjectsAPI = {
     'fetching subjects'
   ),
   getSubjectsByProgramAndSemester: async (programCode, semester) => {
-    console.log('Making subjects API call for program:', programCode, 'semester:', semester);
     
     // Use queued requests for both API calls
     const programsResponse = await queuedRequest(
@@ -517,8 +466,6 @@ export const subjectsAPI = {
       defaultHoursPractical: subject.weeklyHours?.practical || subject.credits?.practical || 0,
       defaultHoursTutorial: subject.weeklyHours?.tutorial || subject.credits?.tutorial || 0
     }));
-    
-    console.log(`Found ${transformedSubjects.length} subjects for ${programCode} semester ${semester}`);
     
     return { data: transformedSubjects };
   },

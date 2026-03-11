@@ -15,6 +15,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Switch,
   message,
   Popconfirm,
@@ -232,13 +233,20 @@ const Teachers = () => {
     mutationFn: ({ id, data }) => teachersAPI.updateTeacher(id, data),
     onSuccess: () => {
       message.success('Teacher updated successfully');
-      queryClient.invalidateQueries(['teachers']);
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
       setEditModalVisible(false);
       setEditingTeacher(null);
       form.resetFields();
     },
     onError: (error) => {
-      message.error(error.response?.data?.msg || 'Failed to update teacher');
+      const errorData = error.response?.data;
+      // Backend may return { errors: [...] } (express-validator) or { message: '...' }
+      if (errorData?.errors?.length > 0) {
+        const firstError = errorData.errors[0];
+        message.error(firstError.msg || firstError.message || 'Validation error');
+      } else {
+        message.error(errorData?.message || errorData?.msg || 'Failed to update teacher');
+      }
     }
   });
 
@@ -247,10 +255,15 @@ const Teachers = () => {
     mutationFn: (id) => teachersAPI.deleteTeacher(id),
     onSuccess: () => {
       message.success('Teacher deleted successfully');
-      queryClient.invalidateQueries(['teachers']);
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
     },
     onError: (error) => {
-      message.error(error.response?.data?.msg || 'Failed to delete teacher');
+      const errorData = error.response?.data;
+      if (errorData?.errors?.length > 0) {
+        message.error(errorData.errors[0].msg || 'Failed to delete teacher');
+      } else {
+        message.error(errorData?.message || errorData?.msg || 'Failed to delete teacher');
+      }
     }
   });
 
@@ -259,13 +272,22 @@ const Teachers = () => {
     mutationFn: (data) => teachersAPI.createTeacher(data),
     onSuccess: () => {
       message.success('Teacher created successfully');
-      queryClient.invalidateQueries(['teachers']);
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
       setEditModalVisible(false);
       setEditingTeacher(null);
       form.resetFields();
     },
     onError: (error) => {
-      message.error(error.response?.data?.msg || 'Failed to create teacher');
+      const errorData = error.response?.data;
+      // Backend may return { errors: [...] } (express-validator) or { message: '...' }
+      if (errorData?.errors?.length > 0) {
+        // Show all validation errors
+        errorData.errors.forEach(err => {
+          message.error(err.msg || err.message || 'Validation error');
+        });
+      } else {
+        message.error(errorData?.message || errorData?.msg || 'Failed to create teacher');
+      }
     }
   });
 
@@ -450,13 +472,21 @@ const Teachers = () => {
   };
 
   const handleEditSubmit = (values) => {
+    // Ensure maxWeeklyHours is a proper number (not a string from Input)
+    const cleanedValues = {
+      ...values,
+      maxWeeklyHours: values.maxWeeklyHours != null ? Number(values.maxWeeklyHours) : 16,
+    };
+    
+    console.log('📝 Submitting teacher data:', cleanedValues);
+    
     if (editingTeacher) {
       updateTeacherMutation.mutate({
         id: editingTeacher._id,
-        data: values
+        data: cleanedValues
       });
     } else {
-      createTeacherMutation.mutate(values);
+      createTeacherMutation.mutate(cleanedValues);
     }
   };
 
@@ -766,7 +796,7 @@ const Teachers = () => {
       open={editModalVisible}
       onOk={form.submit}
       onCancel={handleEditCancel}
-      confirmLoading={updateTeacherMutation.isLoading || createTeacherMutation.isLoading}
+      confirmLoading={updateTeacherMutation.isPending || createTeacherMutation.isPending}
       width={600}
     >
       <Form
@@ -886,9 +916,8 @@ const Teachers = () => {
             <Form.Item
               name="maxWeeklyHours"
               label="Max Weekly Hours"
-              rules={[{ type: 'number', min: 1, max: 24, message: 'Must be between 1 and 24' }]}
             >
-              <Input type="number" placeholder="16" />
+              <InputNumber min={1} max={24} placeholder="16" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>

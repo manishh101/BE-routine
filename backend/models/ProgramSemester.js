@@ -177,7 +177,7 @@ programSemesterSchema.index({
   unique: true,
   partialFilterExpression: { status: 'Active' }
 });
-programSemesterSchema.index({ programCode: 1, semester: 1 });
+programSemesterSchema.index({ programCode: 1, semester: 1, status: 1 });
 programSemesterSchema.index({ academicYearId: 1, status: 1 });
 programSemesterSchema.index({ 'subjects.subjectId': 1 });
 programSemesterSchema.index({ programCode: 1 });

@@ -19,10 +19,10 @@ exports.createDepartment = async (req, res) => {
     console.error(err.message);
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Department with this code already exists' 
+        message: 'Department with this code already exists' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -40,12 +40,13 @@ exports.getDepartments = async (req, res) => {
 
     const departments = await Department.find(filter)
       .populate('headId', 'shortName fullName')
-      .sort({ code: 1 });
+      .sort({ code: 1 })
+      .lean();
       
     res.json(departments);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -58,7 +59,7 @@ exports.getDepartmentById = async (req, res) => {
       .populate('headId', 'shortName fullName email designation');
     
     if (!department) {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
 
     // Get department statistics
@@ -78,9 +79,9 @@ exports.getDepartmentById = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -97,7 +98,7 @@ exports.updateDepartment = async (req, res) => {
     let department = await Department.findById(req.params.id);
     
     if (!department) {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
 
     // If updating headId, verify the teacher exists and belongs to this department
@@ -110,7 +111,7 @@ exports.updateDepartment = async (req, res) => {
       
       if (!teacher) {
         return res.status(400).json({ 
-          msg: 'Department head must be an active teacher in this department' 
+          message: 'Department head must be an active teacher in this department' 
         });
       }
     }
@@ -125,14 +126,14 @@ exports.updateDepartment = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Department with this code already exists' 
+        message: 'Department with this code already exists' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -144,7 +145,7 @@ exports.deleteDepartment = async (req, res) => {
     const department = await Department.findById(req.params.id);
     
     if (!department) {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
 
     // Check if department has active teachers
@@ -155,7 +156,7 @@ exports.deleteDepartment = async (req, res) => {
 
     if (activeTeachers > 0) {
       return res.status(400).json({ 
-        msg: `Cannot delete department with ${activeTeachers} active teachers. Please reassign or deactivate teachers first.` 
+        message: `Cannot delete department with ${activeTeachers} active teachers. Please reassign or deactivate teachers first.` 
       });
     }
 
@@ -163,13 +164,13 @@ exports.deleteDepartment = async (req, res) => {
     department.isActive = false;
     await department.save();
 
-    res.json({ msg: 'Department deactivated successfully' });
+    res.json({ success: false, message: 'Department deactivated successfully' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -181,20 +182,20 @@ exports.getDepartmentTeachers = async (req, res) => {
     const department = await Department.findById(req.params.id);
     
     if (!department) {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
 
     const teachers = await Teacher.find({ 
       departmentId: req.params.id,
       isActive: true 
-    }).select('shortName fullName email designation maxWeeklyHours');
+    }).select('shortName fullName email designation maxWeeklyHours').lean();
 
     res.json(teachers);
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Department not found' });
+      return res.status(404).json({ success: false, message: 'Department not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

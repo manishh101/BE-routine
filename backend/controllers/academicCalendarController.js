@@ -26,10 +26,10 @@ exports.createAcademicCalendar = async (req, res) => {
     console.error(err.message);
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Academic calendar with this Nepali year already exists' 
+        message: 'Academic calendar with this Nepali year already exists' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -45,12 +45,13 @@ exports.getAcademicCalendars = async (req, res) => {
     if (isCurrentYear !== undefined) filter.isCurrentYear = isCurrentYear === 'true';
 
     const calendars = await AcademicCalendar.find(filter)
-      .sort({ nepaliYear: -1 });
+      .sort({ nepaliYear: -1 })
+      .lean();
       
     res.json(calendars);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -62,7 +63,7 @@ exports.getCurrentAcademicCalendar = async (req, res) => {
     const calendar = await AcademicCalendar.findOne({ isCurrentYear: true });
     
     if (!calendar) {
-      return res.status(404).json({ msg: 'No current academic calendar found' });
+      return res.status(404).json({ success: false, message: 'No current academic calendar found' });
     }
 
     // Add computed fields
@@ -78,7 +79,7 @@ exports.getCurrentAcademicCalendar = async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -90,16 +91,16 @@ exports.getAcademicCalendarById = async (req, res) => {
     const calendar = await AcademicCalendar.findById(req.params.id);
     
     if (!calendar) {
-      return res.status(404).json({ msg: 'Academic calendar not found' });
+      return res.status(404).json({ success: false, message: 'Academic calendar not found' });
     }
 
     res.json(calendar);
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Academic calendar not found' });
+      return res.status(404).json({ success: false, message: 'Academic calendar not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -116,7 +117,7 @@ exports.updateAcademicCalendar = async (req, res) => {
     let calendar = await AcademicCalendar.findById(req.params.id);
     
     if (!calendar) {
-      return res.status(404).json({ msg: 'Academic calendar not found' });
+      return res.status(404).json({ success: false, message: 'Academic calendar not found' });
     }
 
     // If setting as current year, deactivate others
@@ -137,14 +138,14 @@ exports.updateAcademicCalendar = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Academic calendar not found' });
+      return res.status(404).json({ success: false, message: 'Academic calendar not found' });
     }
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Academic calendar with this Nepali year already exists' 
+        message: 'Academic calendar with this Nepali year already exists' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -156,23 +157,23 @@ exports.deleteAcademicCalendar = async (req, res) => {
     const calendar = await AcademicCalendar.findById(req.params.id);
     
     if (!calendar) {
-      return res.status(404).json({ msg: 'Academic calendar not found' });
+      return res.status(404).json({ success: false, message: 'Academic calendar not found' });
     }
 
     if (calendar.isCurrentYear) {
       return res.status(400).json({ 
-        msg: 'Cannot delete the current academic calendar' 
+        message: 'Cannot delete the current academic calendar' 
       });
     }
 
     await AcademicCalendar.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Academic calendar deleted successfully' });
+    res.json({ success: false, message: 'Academic calendar deleted successfully' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Academic calendar not found' });
+      return res.status(404).json({ success: false, message: 'Academic calendar not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -185,7 +186,7 @@ exports.updateCurrentWeek = async (req, res) => {
     
     if (!currentWeek || currentWeek < 1 || currentWeek > 16) {
       return res.status(400).json({ 
-        msg: 'Current week must be between 1 and 16' 
+        message: 'Current week must be between 1 and 16' 
       });
     }
 
@@ -196,12 +197,12 @@ exports.updateCurrentWeek = async (req, res) => {
     );
 
     if (!calendar) {
-      return res.status(404).json({ msg: 'No current academic calendar found' });
+      return res.status(404).json({ success: false, message: 'No current academic calendar found' });
     }
 
     res.json(calendar);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

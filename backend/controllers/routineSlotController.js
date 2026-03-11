@@ -19,7 +19,7 @@ exports.createRoutineSlot = async (req, res) => {
     
     if (conflicts.hasConflicts) {
       return res.status(400).json({
-        msg: 'Scheduling conflicts detected',
+        message: 'Scheduling conflicts detected',
         conflicts: conflicts.conflicts
       });
     }
@@ -39,7 +39,7 @@ exports.createRoutineSlot = async (req, res) => {
     res.status(201).json(routineSlot);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -82,12 +82,13 @@ exports.getRoutineSlots = async (req, res) => {
         { path: 'academicYearId', select: 'title nepaliYear' },
         { path: 'labGroupId', select: 'name groups' }
       ])
-      .sort({ dayIndex: 1, slotIndex: 1 });
+      .sort({ dayIndex: 1, slotIndex: 1 })
+      .lean();
       
     res.json(routineSlots);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -108,16 +109,16 @@ exports.getRoutineSlotById = async (req, res) => {
       ]);
     
     if (!routineSlot) {
-      return res.status(404).json({ msg: 'Routine slot not found' });
+      return res.status(404).json({ success: false, message: 'Routine slot not found' });
     }
 
     res.json(routineSlot);
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Routine slot not found' });
+      return res.status(404).json({ success: false, message: 'Routine slot not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -134,16 +135,26 @@ exports.updateRoutineSlot = async (req, res) => {
     let routineSlot = await RoutineSlot.findById(req.params.id);
     
     if (!routineSlot) {
-      return res.status(404).json({ msg: 'Routine slot not found' });
+      return res.status(404).json({ success: false, message: 'Routine slot not found' });
     }
 
-    // Check for conflicts with the updated data
+    // Check for conflicts with the updated data, excluding the current slot itself
     const updateData = { ...req.body, _id: req.params.id };
-    const conflicts = await conflictDetection.checkSlotConflicts(updateData);
+    
+    // Temporarily deactivate the slot to prevent self-conflict detection
+    await RoutineSlot.findByIdAndUpdate(req.params.id, { isActive: false });
+    
+    let conflicts;
+    try {
+      conflicts = await conflictDetection.checkSlotConflicts(updateData);
+    } finally {
+      // Re-activate regardless of outcome
+      await RoutineSlot.findByIdAndUpdate(req.params.id, { isActive: true });
+    }
     
     if (conflicts.hasConflicts) {
       return res.status(400).json({
-        msg: 'Scheduling conflicts detected',
+        message: 'Scheduling conflicts detected',
         conflicts: conflicts.conflicts
       });
     }
@@ -164,9 +175,9 @@ exports.updateRoutineSlot = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Routine slot not found' });
+      return res.status(404).json({ success: false, message: 'Routine slot not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -178,7 +189,7 @@ exports.deleteRoutineSlot = async (req, res) => {
     const routineSlot = await RoutineSlot.findById(req.params.id);
     
     if (!routineSlot) {
-      return res.status(404).json({ msg: 'Routine slot not found' });
+      return res.status(404).json({ success: false, message: 'Routine slot not found' });
     }
 
     // Store affected teacher IDs for cache invalidation
@@ -202,7 +213,7 @@ exports.deleteRoutineSlot = async (req, res) => {
     }
 
     res.json({ 
-      msg: 'Routine slot deleted successfully and completely removed from database',
+      message: 'Routine slot deleted successfully and completely removed from database',
       deletedSlot: {
         id: req.params.id,
         affectedTeachers: affectedTeacherIds.length
@@ -211,9 +222,9 @@ exports.deleteRoutineSlot = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Routine slot not found' });
+      return res.status(404).json({ success: false, message: 'Routine slot not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -237,7 +248,8 @@ exports.getWeeklySchedule = async (req, res) => {
         { path: 'teacherIds', select: 'shortName' },
         { path: 'roomId', select: 'name' }
       ])
-      .sort({ dayIndex: 1, slotIndex: 1 });
+      .sort({ dayIndex: 1, slotIndex: 1 })
+      .lean();
 
     // Organize by day and time slot
     const schedule = {
@@ -264,7 +276,7 @@ exports.getWeeklySchedule = async (req, res) => {
     res.json(schedule);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -277,7 +289,7 @@ exports.checkConflicts = async (req, res) => {
     res.json(conflicts);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -289,7 +301,7 @@ exports.bulkCreateRoutineSlots = async (req, res) => {
     const { slots } = req.body;
     
     if (!Array.isArray(slots) || slots.length === 0) {
-      return res.status(400).json({ msg: 'Slots array is required' });
+      return res.status(400).json({ success: false, message: 'Slots array is required' });
     }
 
     const results = {
@@ -324,7 +336,7 @@ exports.bulkCreateRoutineSlots = async (req, res) => {
     }
 
     res.json({
-      msg: 'Bulk operation completed',
+      message: 'Bulk operation completed',
       summary: {
         total: slots.length,
         created: results.created.length,
@@ -335,7 +347,7 @@ exports.bulkCreateRoutineSlots = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -367,11 +379,11 @@ exports.createElectiveClass = async (req, res) => {
 
     // Validation
     if (!subjects || !Array.isArray(subjects) || subjects.length === 0) {
-      return res.status(400).json({ msg: 'At least one subject is required for elective class' });
+      return res.status(400).json({ success: false, message: 'At least one subject is required for elective class' });
     }
 
     if (subjects.length !== new Set(subjects.map(s => s.subjectId)).size) {
-      return res.status(400).json({ msg: 'Duplicate subjects are not allowed' });
+      return res.status(400).json({ success: false, message: 'Duplicate subjects are not allowed' });
     }
 
     // Extract subject, teacher, and room IDs in synchronized order
@@ -398,15 +410,15 @@ exports.createElectiveClass = async (req, res) => {
     const [subjectDocs, teacherDocs, roomDocs] = results;
 
     if (subjectDocs.length !== subjects.length) {
-      return res.status(400).json({ msg: 'One or more subjects not found' });
+      return res.status(400).json({ success: false, message: 'One or more subjects not found' });
     }
 
     if (teacherDocs.length !== subjects.length) {
-      return res.status(400).json({ msg: 'One or more teachers not found' });
+      return res.status(400).json({ success: false, message: 'One or more teachers not found' });
     }
     
     if (roomIds.length > 0 && roomDocs && roomDocs.length !== roomIds.length) {
-      return res.status(400).json({ msg: 'One or more rooms not found' });
+      return res.status(400).json({ success: false, message: 'One or more rooms not found' });
     }
 
     // For elective classes, use the first room if provided from subjects, otherwise use the main roomId
@@ -462,7 +474,7 @@ exports.createElectiveClass = async (req, res) => {
       
       if (conflicts.hasConflicts) {
         return res.status(400).json({
-          msg: `Scheduling conflicts detected for slot ${currentSlotIndex}`,
+          message: `Scheduling conflicts detected for slot ${currentSlotIndex}`,
           conflicts: conflicts.conflicts
         });
       }
@@ -493,6 +505,6 @@ exports.createElectiveClass = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

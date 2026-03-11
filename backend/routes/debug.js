@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const RoutineSlot = require('../models/RoutineSlot');
 const { getLabGroupsForSection } = require('../utils/sectionUtils');
+const { protect, authorize } = require('../middleware/auth');
+
+// All debug routes require authentication and admin role
+router.use(protect, authorize('admin'));
 
 // Debug route to check multi-group data
 router.get('/multi-groups/:programCode/:semester/:section', async (req, res) => {
@@ -13,14 +17,12 @@ router.get('/multi-groups/:programCode/:semester/:section', async (req, res) => 
       semester: parseInt(semester),
       section: section.toUpperCase(),
       isActive: true
-    }).sort({ dayIndex: 1, slotIndex: 1, labGroup: 1 });
+    }).lean().sort({ dayIndex: 1, slotIndex: 1, labGroup: 1 });
 
-    const multiGroupSlots = slots.filter(slot => {
-      const validGroups = getLabGroupsForSection(section);
-      return slot.labGroup && validGroups.includes(slot.labGroup);
-    });
-
-    console.log(`Found ${slots.length} total slots, ${multiGroupSlots.length} multi-group slots`);
+    const validGroups = getLabGroupsForSection(section);
+    const multiGroupSlots = slots.filter(slot =>
+      slot.labGroup && validGroups.includes(slot.labGroup)
+    );
 
     res.json({
       success: true,

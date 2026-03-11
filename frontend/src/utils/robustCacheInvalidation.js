@@ -12,6 +12,8 @@
  * 4. Fallback mechanisms for edge cases
  */
 
+import { useEffect, useRef } from 'react';
+
 /**
  * Completely flush all routine-related caches and force fresh data fetch
  * This is the nuclear option - removes all caches and forces fresh data
@@ -38,31 +40,13 @@ export const nukeAllRoutineRelatedCaches = async (queryClient) => {
       'sections'
     ];
     
-    // Remove all queries with these keys
+    // Remove all queries with these keys using correct React Query v5 API
     for (const key of routineKeys) {
-      queryClient.removeQueries([key]);
       queryClient.removeQueries({ queryKey: [key] });
-      queryClient.removeQueries({ queryKey: [key], exact: false });
     }
     
-    // 2. Clear the entire cache as a fallback
-    await queryClient.clear();
-    
-    // 3. Force immediate refetch of critical queries
-    const criticalQueries = [
-      ['teachers'],
-      ['rooms'],
-      ['timeSlots'],
-      ['programs']
-    ];
-    
-    for (const queryKey of criticalQueries) {
-      try {
-        await queryClient.prefetchQuery(queryKey);
-      } catch (error) {
-        console.warn(`Failed to prefetch ${queryKey.join('.')}: ${error.message}`);
-      }
-    }
+    // 2. Invalidate everything to trigger refetches for active queries
+    await queryClient.invalidateQueries();
     
     console.log('✅ Nuclear cache flush completed successfully');
     return true;
@@ -92,96 +76,46 @@ export const invalidateAfterClassAssignment = async (queryClient, options = {}) 
     
     // 1. Remove specific program routine caches
     if (programCode && semester && section) {
-      const programCacheKeys = [
-        ['routine', programCode, parseInt(semester), section],
-        ['routine', programCode, semester, section],
-        ['routines', programCode, parseInt(semester), section],
-        ['routines', programCode, semester, section]
-      ];
-      
-      for (const key of programCacheKeys) {
-        queryClient.removeQueries(key);
-        queryClient.removeQueries({ queryKey: key });
-      }
+      queryClient.removeQueries({ queryKey: ['routine', programCode, parseInt(semester), section] });
+      queryClient.removeQueries({ queryKey: ['routine', programCode, semester, section] });
     }
     
     // 2. Remove all teacher schedule caches for affected teachers
     if (teacherIds && teacherIds.length > 0) {
       for (const teacherId of teacherIds) {
-        const teacherCacheKeys = [
-          ['teacher-schedule-from-routine', teacherId],
-          ['teacher-schedule', teacherId],
-          ['teacherSchedule', teacherId],
-          ['teachers', teacherId, 'schedule']
-        ];
-        
-        for (const key of teacherCacheKeys) {
-          queryClient.removeQueries(key);
-          queryClient.removeQueries({ queryKey: key });
-        }
+        queryClient.removeQueries({ queryKey: ['teacher-schedule-from-routine', teacherId] });
       }
-      
-      // Also remove general teacher schedule queries
-      queryClient.removeQueries(['teacher-schedule-from-routine']);
-      queryClient.removeQueries(['teacherSchedule']);
     }
+    // Also remove all teacher schedule queries (any teacher might be affected by reassignment)
+    queryClient.removeQueries({ queryKey: ['teacher-schedule-from-routine'] });
+    queryClient.removeQueries({ queryKey: ['teacherSchedule'] });
     
     // 3. Remove all room schedule caches for affected room
     if (roomId) {
-      const roomCacheKeys = [
-        ['roomSchedule', roomId],
-        ['room-schedule', roomId],
-        ['rooms', roomId, 'schedule']
-      ];
-      
-      for (const key of roomCacheKeys) {
-        queryClient.removeQueries(key);
-        queryClient.removeQueries({ queryKey: key });
-      }
-      
-      // Also remove general room schedule queries
-      queryClient.removeQueries(['roomSchedule']);
-      queryClient.removeQueries(['room-schedule']);
+      queryClient.removeQueries({ queryKey: ['roomSchedule', roomId] });
     }
+    // Also remove all room schedule queries (room reassignment affects old and new room)
+    queryClient.removeQueries({ queryKey: ['roomSchedule'] });
     
-    // 4. Remove all general queries that might be affected
-    const generalQueries = [
-      'teachers',
-      'rooms', 
-      'routine',
-      'routines'
-    ];
-    
-    for (const query of generalQueries) {
-      queryClient.removeQueries([query]);
-      queryClient.removeQueries({ queryKey: [query] });
-    }
-    
-    // 5. Force immediate refetch of affected queries
+    // 4. Force immediate refetch of affected active queries
     const refetchPromises = [];
     
     // Refetch program routine
     if (programCode && semester && section) {
       refetchPromises.push(
-        queryClient.refetchQueries(['routine', programCode, semester, section])
+        queryClient.refetchQueries({ queryKey: ['routine', programCode, semester, section] })
       );
     }
     
-    // Refetch teacher schedules
-    if (teacherIds && teacherIds.length > 0) {
-      for (const teacherId of teacherIds) {
-        refetchPromises.push(
-          queryClient.refetchQueries(['teacher-schedule-from-routine', teacherId])
-        );
-      }
-    }
+    // Refetch all active teacher schedules
+    refetchPromises.push(
+      queryClient.refetchQueries({ queryKey: ['teacher-schedule-from-routine'] })
+    );
     
-    // Refetch room schedule
-    if (roomId) {
-      refetchPromises.push(
-        queryClient.refetchQueries(['roomSchedule', roomId])
-      );
-    }
+    // Refetch all active room schedules
+    refetchPromises.push(
+      queryClient.refetchQueries({ queryKey: ['roomSchedule'] })
+    );
     
     // Wait for all refetches to complete
     await Promise.allSettled(refetchPromises);
@@ -200,7 +134,7 @@ export const invalidateAfterClassAssignment = async (queryClient, options = {}) 
  */
 export const broadcastRoutineChange = (changeData) => {
   try {
-    console.log('📡 Broadcasting routine change event:', changeData);
+    console.log(' Broadcasting routine change event:', changeData);
     
     if (typeof window !== 'undefined' && window.dispatchEvent) {
       // Create custom event with detailed data
@@ -238,22 +172,19 @@ export const broadcastRoutineChange = (changeData) => {
  */
 export const handleClassAssignmentSuccess = async (queryClient, assignmentData) => {
   try {
-    console.log('🎯 HANDLING CLASS ASSIGNMENT SUCCESS:', assignmentData);
+    console.log(' HANDLING CLASS ASSIGNMENT SUCCESS:', assignmentData);
     
     // Step 1: Robust cache invalidation
     await invalidateAfterClassAssignment(queryClient, assignmentData);
     
-    // Step 2: Broadcast change event
+    // Step 2: Broadcast change event to all listening components
     broadcastRoutineChange(assignmentData);
     
     // Step 3: Small delay to ensure UI updates
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Step 4: Nuclear option if needed (can be enabled for debugging)
-    const enableNuclearOption = false; // Set to true for debugging
-    if (enableNuclearOption) {
-      await nukeAllRoutineRelatedCaches(queryClient);
-    }
+    // Step 4: Nuclear cache flush to guarantee fresh data across all views
+    await nukeAllRoutineRelatedCaches(queryClient);
     
     console.log('✅ Class assignment success handling completed');
     return true;
@@ -266,50 +197,66 @@ export const handleClassAssignmentSuccess = async (queryClient, assignmentData) 
 
 /**
  * Hook for components to listen to routine changes
+ * Properly implemented as a React hook with useEffect for cleanup
  */
+
 export const useRoutineChangeListener = (queryClient, callback) => {
-  const handleRoutineChange = (event) => {
-    console.log('🔔 Routine change detected:', event.detail);
-    
-    // Invalidate queries in the component
-    if (queryClient) {
-      queryClient.invalidateQueries(['teacher-schedule-from-routine']);
-      queryClient.invalidateQueries(['roomSchedule']);
-      queryClient.invalidateQueries(['routine']);
-    }
-    
-    // Call the callback if provided
-    if (callback && typeof callback === 'function') {
-      callback(event.detail);
-    }
-  };
+  const callbackRef = useRef(callback);
+  const queryClientRef = useRef(queryClient);
   
-  const handleScheduleUpdate = (event) => {
-    console.log('📅 Schedule update detected:', event.detail);
-    
-    // Force a general refresh
-    if (queryClient) {
-      queryClient.invalidateQueries();
-    }
-    
-    if (callback && typeof callback === 'function') {
-      callback(event.detail);
-    }
-  };
+  // Keep refs up to date
+  useEffect(() => {
+    callbackRef.current = callback;
+    queryClientRef.current = queryClient;
+  }, [callback, queryClient]);
   
-  // Set up listeners
-  if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleRoutineChange = (event) => {
+      console.log(' Routine change detected:', event.detail);
+      
+      // Invalidate all schedule-related queries immediately
+      if (queryClientRef.current) {
+        // Invalidate teacher schedules
+        queryClientRef.current.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] });
+        queryClientRef.current.invalidateQueries({ queryKey: ['teacherSchedule'] });
+        // Invalidate room schedules
+        queryClientRef.current.invalidateQueries({ queryKey: ['roomSchedule'] });
+        queryClientRef.current.invalidateQueries({ queryKey: ['room-schedule'] });
+        // Invalidate routine data
+        queryClientRef.current.invalidateQueries({ queryKey: ['routine'] });
+      }
+      
+      // Call the callback if provided
+      if (callbackRef.current && typeof callbackRef.current === 'function') {
+        callbackRef.current(event.detail);
+      }
+    };
+    
+    const handleScheduleUpdate = (event) => {
+      console.log(' Schedule update detected:', event.detail);
+      
+      // Force a general refresh of all schedule queries
+      if (queryClientRef.current) {
+        queryClientRef.current.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] });
+        queryClientRef.current.invalidateQueries({ queryKey: ['roomSchedule'] });
+        queryClientRef.current.invalidateQueries({ queryKey: ['routine'] });
+      }
+      
+      if (callbackRef.current && typeof callbackRef.current === 'function') {
+        callbackRef.current(event.detail);
+      }
+    };
+    
     window.addEventListener('routineDataChanged', handleRoutineChange);
     window.addEventListener('scheduleUpdated', handleScheduleUpdate);
     
-    // Return cleanup function
     return () => {
       window.removeEventListener('routineDataChanged', handleRoutineChange);
       window.removeEventListener('scheduleUpdated', handleScheduleUpdate);
     };
-  }
-  
-  return () => {}; // No-op cleanup for server-side
+  }, []); // Empty deps - refs handle the updates
 };
 
 export default {

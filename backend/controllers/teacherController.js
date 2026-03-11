@@ -23,7 +23,7 @@ exports.createTeacher = async (req, res) => {
       
       if (!department) {
         return res.status(400).json({ 
-          msg: 'Department not found or inactive' 
+          message: 'Department not found or inactive' 
         });
       }
     }
@@ -36,16 +36,22 @@ exports.createTeacher = async (req, res) => {
     
     res.status(201).json(teacher);
   } catch (err) {
-    console.error(err.message);
+    console.error('Teacher creation error:', err.message);
     if (err.code === 11000) {
       if (err.keyPattern?.email) {
-        return res.status(400).json({ msg: 'Teacher with this email already exists' });
+        return res.status(400).json({ success: false, message: 'Teacher with this email already exists' });
       }
       if (err.keyPattern?.shortName) {
-        return res.status(400).json({ msg: 'Teacher with this short name already exists in the department' });
+        return res.status(400).json({ success: false, message: 'Teacher with this short name already exists' });
       }
+      return res.status(400).json({ success: false, message: 'Duplicate entry detected' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    // Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join('. ') });
+    }
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -64,20 +70,25 @@ exports.createTeachersBulk = async (req, res) => {
     } else {
       return res.status(400).json({
         success: false,
-        msg: 'Request body must be an array of teachers or an object with "teachers" property containing an array'
+        message: 'Request body must be an array of teachers or an object with "teachers" property containing an array'
       });
     }
 
     if (teachersData.length === 0) {
       return res.status(400).json({
         success: false,
-        msg: 'No teachers provided for creation'
+        message: 'No teachers provided for creation'
       });
     }
 
     // Validate and prepare teachers
     const validationErrors = [];
     const validTeachers = [];
+
+    // Batch-validate all department IDs at once
+    const uniqueDeptIds = [...new Set(teachersData.filter(t => t.departmentId).map(t => t.departmentId.toString()))];
+    const validDepartments = await Department.find({ _id: { $in: uniqueDeptIds }, isActive: true }).lean();
+    const validDeptSet = new Set(validDepartments.map(d => d._id.toString()));
 
     for (let i = 0; i < teachersData.length; i++) {
       const teacher = teachersData[i];
@@ -99,16 +110,9 @@ exports.createTeachersBulk = async (req, res) => {
         validationErrors.push(`Teacher ${teacherIndex}: invalid email format`);
       }
 
-      // Validate department exists
-      if (teacher.departmentId) {
-        const department = await Department.findOne({
-          _id: teacher.departmentId,
-          isActive: true
-        });
-        
-        if (!department) {
-          validationErrors.push(`Teacher ${teacherIndex}: department not found or inactive`);
-        }
+      // Validate department exists (using pre-fetched set)
+      if (teacher.departmentId && !validDeptSet.has(teacher.departmentId.toString())) {
+        validationErrors.push(`Teacher ${teacherIndex}: department not found or inactive`);
       }
 
       if (validationErrors.length === 0 || validationErrors.filter(err => err.startsWith(`Teacher ${teacherIndex}:`)).length === 0) {
@@ -119,7 +123,7 @@ exports.createTeachersBulk = async (req, res) => {
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
-        msg: 'Validation errors',
+        message: 'Validation errors',
         errors: validationErrors
       });
     }
@@ -192,12 +196,13 @@ exports.getTeachers = async (req, res) => {
     const teachers = await Teacher.find(filter)
       .populate('departmentId', 'code name')
       .populate('specializations', 'code name')
-      .sort({ departmentId: 1, shortName: 1 });
+      .sort({ departmentId: 1, shortName: 1 })
+      .lean();
       
     res.json(teachers);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -206,22 +211,28 @@ exports.getTeachers = async (req, res) => {
 // @access  Private
 exports.getTeacherById = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Teacher ID format' });
+    }
+
     const teacher = await Teacher.findById(req.params.id)
       .populate('departmentId', 'code name fullName')
       .populate('specializations', 'code name credits')
-      .populate('userId', 'email role');
+      .populate('userId', 'email role')
+      .lean();
     
     if (!teacher) {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
 
     res.json(teacher);
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -235,10 +246,15 @@ exports.updateTeacher = async (req, res) => {
   }
 
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Teacher ID format' });
+    }
+
     let teacher = await Teacher.findById(req.params.id);
     
     if (!teacher) {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
 
     // Validate department if updating
@@ -250,7 +266,7 @@ exports.updateTeacher = async (req, res) => {
       
       if (!department) {
         return res.status(400).json({ 
-          msg: 'Department not found or inactive' 
+          message: 'Department not found or inactive' 
         });
       }
     }
@@ -266,17 +282,17 @@ exports.updateTeacher = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
     if (err.code === 11000) {
       if (err.keyPattern?.email) {
-        return res.status(400).json({ msg: 'Teacher with this email already exists' });
+        return res.status(400).json({ success: false, message: 'Teacher with this email already exists' });
       }
       if (err.keyPattern?.shortName) {
-        return res.status(400).json({ msg: 'Teacher with this short name already exists in the department' });
+        return res.status(400).json({ success: false, message: 'Teacher with this short name already exists in the department' });
       }
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -288,7 +304,7 @@ exports.deleteTeacher = async (req, res) => {
     const teacher = await Teacher.findById(req.params.id);
     
     if (!teacher) {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
 
     // Check if teacher is a department head
@@ -297,7 +313,7 @@ exports.deleteTeacher = async (req, res) => {
     
     if (isDeptHead) {
       return res.status(400).json({ 
-        msg: 'Cannot delete teacher who is a department head. Please assign a new head first.' 
+        message: 'Cannot delete teacher who is a department head. Please assign a new head first.' 
       });
     }
 
@@ -329,14 +345,14 @@ exports.deleteTeacher = async (req, res) => {
     await teacher.save();
 
     res.json({ 
-      msg: 'Teacher deactivated successfully and removed from all assignments' 
+      message: 'Teacher deactivated successfully and removed from all assignments' 
     });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -357,7 +373,7 @@ exports.deleteTeachersBulk = async (req, res) => {
     } else {
       return res.status(400).json({ 
         success: false,
-        msg: 'Request body must be an array of teacher IDs or an object with "teacherIds" array property' 
+        message: 'Request body must be an array of teacher IDs or an object with "teacherIds" array property' 
       });
     }
 
@@ -365,7 +381,7 @@ exports.deleteTeachersBulk = async (req, res) => {
     if (teacherIds.length === 0) {
       return res.status(400).json({ 
         success: false,
-        msg: 'At least one teacher ID is required' 
+        message: 'At least one teacher ID is required' 
       });
     }
 
@@ -381,7 +397,7 @@ exports.deleteTeachersBulk = async (req, res) => {
     if (invalidIds.length > 0) {
       return res.status(400).json({ 
         success: false,
-        msg: 'Invalid teacher IDs',
+        message: 'Invalid teacher IDs',
         errors: invalidIds 
       });
     }
@@ -394,7 +410,7 @@ exports.deleteTeachersBulk = async (req, res) => {
     if (existingTeachers.length === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'No teachers found with the provided IDs',
+        message: 'No teachers found with the provided IDs',
         notFoundIds: notFoundIds
       });
     }
@@ -470,7 +486,7 @@ exports.deleteTeachersBulk = async (req, res) => {
     console.error('Bulk teacher deletion error:', err);
     res.status(500).json({
       success: false,
-      msg: 'Server error during bulk deletion',
+      message: 'Server error during bulk deletion',
       error: err.message
     });
   }
@@ -488,7 +504,7 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(departmentId)) {
       return res.status(400).json({ 
         success: false,
-        msg: 'Invalid department ID format' 
+        message: 'Invalid department ID format' 
       });
     }
 
@@ -497,7 +513,7 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
     if (!department) {
       return res.status(404).json({
         success: false,
-        msg: 'Department not found',
+        message: 'Department not found',
         departmentId: departmentId
       });
     }
@@ -511,7 +527,7 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
     if (teachersInDept.length === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'No active teachers found in the specified department',
+        message: 'No active teachers found in the specified department',
         departmentId: departmentId
       });
     }
@@ -590,7 +606,7 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
     console.error('Delete teachers by department ID error:', err);
     res.status(500).json({
       success: false,
-      msg: 'Server error during department-based deletion',
+      message: 'Server error during department-based deletion',
       error: err.message
     });
   }
@@ -602,25 +618,22 @@ exports.deleteTeachersByDepartmentId = async (req, res) => {
 exports.getTeacherSchedule = async (req, res) => {
   try {
     const { academicYearId } = req.query;
+    const AcademicCalendar = require('../models/AcademicCalendar');
     
-    const teacher = await Teacher.findById(req.params.id);
+    // Fetch teacher and academic year in parallel
+    const [teacher, academicYear] = await Promise.all([
+      Teacher.findById(req.params.id).lean(),
+      academicYearId 
+        ? AcademicCalendar.findById(academicYearId).lean()
+        : AcademicCalendar.findOne({ isCurrentYear: true }).lean()
+    ]);
+    
     if (!teacher) {
-      return res.status(404).json({ msg: 'Teacher not found' });
-    }
-
-    // Get current academic year if not specified
-    let academicYear;
-    if (academicYearId) {
-      const AcademicCalendar = require('../models/AcademicCalendar');
-      academicYear = await AcademicCalendar.findById(academicYearId);
-    } else {
-      const AcademicCalendar = require('../models/AcademicCalendar');
-      academicYear = await AcademicCalendar.findOne({ isCurrentYear: true });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
 
     // If no academic year found, return empty schedule instead of 404
     if (!academicYear) {
-      console.log('No current academic year found, returning empty schedule');
       return res.json({
         success: true,
         data: {
@@ -652,7 +665,7 @@ exports.getTeacherSchedule = async (req, res) => {
       { path: 'subjectId', select: 'code name weeklyHours' },
       { path: 'roomId', select: 'name building' },
       { path: 'labGroupId', select: 'groups' }
-    ]).sort({ dayIndex: 1, slotIndex: 1 });
+    ]).sort({ dayIndex: 1, slotIndex: 1 }).lean();
 
     // IMPORTANT: Use the SAME data format as routine manager
     // Create routine object with day indices as keys and slot indices as sub-keys
@@ -704,18 +717,13 @@ exports.getTeacherSchedule = async (req, res) => {
         // If slot already exists, convert to array or add to existing array
         const existing = routine[slot.dayIndex][slot.slotIndex];
         
-        console.log(`🔄 Teacher ${teacher.shortName}: Found duplicate slot - Day ${slot.dayIndex}, Slot ${slot.slotIndex}`);
-        console.log(`   Existing: semester=${existing.semester} (${getSemesterGroupName(existing.semester)}), subject=${existing.subjectName}`);
-        console.log(`   New: semester=${slotData.semester} (${getSemesterGroupName(slotData.semester)}), subject=${slotData.subjectName}`);
         
         if (Array.isArray(existing)) {
           // Already an array, add new slot
           existing.push(slotData);
-          console.log(`   Added to existing array, now has ${existing.length} items`);
         } else {
           // Convert single slot to array with both slots
           routine[slot.dayIndex][slot.slotIndex] = [existing, slotData];
-          console.log(`   Converted to array with 2 items`);
         }
       } else {
         // First slot for this time - store directly
@@ -723,7 +731,6 @@ exports.getTeacherSchedule = async (req, res) => {
       }
     });
 
-    console.log(`Teacher ${teacher.shortName} schedule generated with ${routineSlots.length} classes`);
 
     // Return in the EXACT SAME format as routine manager
     res.json({
@@ -741,9 +748,9 @@ exports.getTeacherSchedule = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Invalid ID format' });
+      return res.status(404).json({ success: false, message: 'Invalid ID format' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -755,17 +762,17 @@ exports.updateTeacherAvailability = async (req, res) => {
     const teacher = await Teacher.findById(req.params.id);
     
     if (!teacher) {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
 
     const { availableDays, unavailableSlots } = req.body;
 
-    if (availableDays) {
-      teacher.schedulingConstraints.availableDays = availableDays;
+    if (availableDays !== undefined) {
+      teacher.availableDays = availableDays;
     }
 
-    if (unavailableSlots) {
-      teacher.schedulingConstraints.unavailableSlots = unavailableSlots;
+    if (unavailableSlots !== undefined) {
+      teacher.unavailableSlots = unavailableSlots;
     }
 
     await teacher.save();
@@ -773,9 +780,9 @@ exports.updateTeacherAvailability = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -789,7 +796,7 @@ exports.exportTeacherSchedule = async (req, res) => {
     const teacher = await Teacher.findById(req.params.id);
     
     if (!teacher) {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
 
     // Return a message that Excel export is disabled
@@ -801,9 +808,9 @@ exports.exportTeacherSchedule = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Teacher not found' });
+      return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -818,7 +825,7 @@ exports.hardDeleteAllTeachers = async (req, res) => {
     if (totalCount === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'No teachers found in the database'
+        message: 'No teachers found in the database'
       });
     }
 
@@ -844,7 +851,7 @@ exports.hardDeleteAllTeachers = async (req, res) => {
     console.error('Hard delete all teachers error:', err.message);
     res.status(500).json({ 
       success: false,
-      msg: 'Server error during hard deletion', 
+      message: 'Server error during hard deletion', 
       error: err.message 
     });
   }
@@ -865,14 +872,14 @@ exports.hardDeleteTeachersBulk = async (req, res) => {
     } else {
       return res.status(400).json({
         success: false,
-        msg: 'Request body must be an array of teacher IDs or an object with teacherIds array'
+        message: 'Request body must be an array of teacher IDs or an object with teacherIds array'
       });
     }
 
     if (!teacherIds || teacherIds.length === 0) {
       return res.status(400).json({
         success: false,
-        msg: 'No teacher IDs provided'
+        message: 'No teacher IDs provided'
       });
     }
 
@@ -882,7 +889,7 @@ exports.hardDeleteTeachersBulk = async (req, res) => {
     if (invalidIds.length > 0) {
       return res.status(400).json({
         success: false,
-        msg: `Invalid teacher IDs: ${invalidIds.join(', ')}`
+        message: `Invalid teacher IDs: ${invalidIds.join(', ')}`
       });
     }
 
@@ -898,7 +905,7 @@ exports.hardDeleteTeachersBulk = async (req, res) => {
     if (existingTeachers.length === 0) {
       return res.status(404).json({
         success: false,
-        msg: 'None of the specified teachers were found',
+        message: 'None of the specified teachers were found',
         notFoundIds: teacherIds,
         notFoundCount: teacherIds.length
       });
@@ -927,7 +934,7 @@ exports.hardDeleteTeachersBulk = async (req, res) => {
     console.error('Hard delete bulk teachers error:', err.message);
     res.status(500).json({ 
       success: false,
-      msg: 'Server error during bulk hard deletion', 
+      message: 'Server error during bulk hard deletion', 
       error: err.message 
     });
   }
@@ -944,7 +951,7 @@ exports.findMeetingSlots = async (req, res) => {
     if (!teacherIds || !Array.isArray(teacherIds) || teacherIds.length < 2) {
       return res.status(400).json({
         success: false,
-        msg: 'At least 2 teacher IDs are required'
+        message: 'At least 2 teacher IDs are required'
       });
     }
 
@@ -952,7 +959,7 @@ exports.findMeetingSlots = async (req, res) => {
     if (semesterGroup && !['odd', 'even', 'all'].includes(semesterGroup)) {
       return res.status(400).json({
         success: false,
-        msg: 'semesterGroup must be either "odd", "even", or "all"'
+        message: 'semesterGroup must be either "odd", "even", or "all"'
       });
     }
 
@@ -967,7 +974,7 @@ exports.findMeetingSlots = async (req, res) => {
       const missingIds = teacherIds.filter(id => !foundIds.includes(id));
       return res.status(400).json({
         success: false,
-        msg: 'One or more teachers not found',
+        message: 'One or more teachers not found',
         missingTeacherIds: missingIds
       });
     }
@@ -985,7 +992,7 @@ exports.findMeetingSlots = async (req, res) => {
     if (!academicYear) {
       return res.status(400).json({
         success: false,
-        msg: 'No academic year found'
+        message: 'No academic year found'
       });
     }
 
@@ -1008,7 +1015,6 @@ exports.findMeetingSlots = async (req, res) => {
       { path: 'programId', select: 'code name' }
     ]).sort({ dayIndex: 1, slotIndex: 1 });
 
-    console.log(`Found ${routineSlots.length} routine slots for meeting scheduler`);
 
     // Create a meeting availability grid using slotIndex directly
     const daysToCheck = [0, 1, 2, 3, 4, 5].filter(day => !excludeDays.includes(day)); // Sun-Fri
@@ -1152,7 +1158,7 @@ exports.findMeetingSlots = async (req, res) => {
     console.error('Find meeting slots error:', err.message);
     res.status(500).json({
       success: false,
-      msg: 'Server error while finding meeting slots',
+      message: 'Server error while finding meeting slots',
       error: err.message
     });
   }

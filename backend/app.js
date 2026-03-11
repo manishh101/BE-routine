@@ -231,7 +231,6 @@ routeHandler('/api/programs', './routes/programs');
 routeHandler('/api/subjects', './routes/subjects');
 routeHandler('/api/rooms', './routes/rooms');
 routeHandler('/api/time-slots', './routes/timeSlots');
-routeHandler('/api/timeslots', './routes/timeslots'); // Legacy route
 routeHandler('/api/routines', './routes/routine');
 routeHandler('/api/routine-slots', './routes/routineSlots');
 routeHandler('/api/program-semesters', './routes/programSemesters');
@@ -292,8 +291,7 @@ app.get('/', (req, res) => {
       'section-elective-choices': '/api/section-elective-choices',
       sessions: '/api/sessions',
       templates: '/api/templates',
-      conflicts: '/api/conflicts',
-      excel: '/api/excel'
+      conflicts: '/api/conflicts'
     }
   });
 });

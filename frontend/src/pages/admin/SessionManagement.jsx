@@ -92,7 +92,7 @@ const SessionManagement = () => {
     mutationFn: (sessionData) => sessionsAPI.createSession(sessionData),
     onSuccess: () => {
       message.success('Academic session created successfully');
-      queryClient.invalidateQueries(['sessions']);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
       setIsModalVisible(false);
       form.resetFields();
     },
@@ -106,7 +106,7 @@ const SessionManagement = () => {
     mutationFn: ({ id, data }) => sessionsAPI.updateSession(id, data),
     onSuccess: () => {
       message.success('Academic session updated successfully');
-      queryClient.invalidateQueries(['sessions']);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
       setIsModalVisible(false);
       setEditingSession(null);
       form.resetFields();
@@ -121,7 +121,7 @@ const SessionManagement = () => {
     mutationFn: (id) => sessionsAPI.deleteSession(id),
     onSuccess: () => {
       message.success('Academic session deleted successfully');
-      queryClient.invalidateQueries(['sessions']);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
     onError: (error) => {
       message.error(`Failed to delete session: ${error.response?.data?.message || error.message}`);
@@ -133,7 +133,7 @@ const SessionManagement = () => {
     mutationFn: (id) => sessionsAPI.activateSession(id),
     onSuccess: () => {
       message.success('Session activated successfully');
-      queryClient.invalidateQueries(['sessions']);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
     onError: (error) => {
       message.error(`Failed to activate session: ${error.response?.data?.message || error.message}`);
@@ -144,7 +144,7 @@ const SessionManagement = () => {
     mutationFn: (id) => sessionsAPI.completeSession(id),
     onSuccess: () => {
       message.success('Session completed successfully');
-      queryClient.invalidateQueries(['sessions']);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
     onError: (error) => {
       message.error(`Failed to complete session: ${error.response?.data?.message || error.message}`);
@@ -155,7 +155,7 @@ const SessionManagement = () => {
     mutationFn: (id) => sessionsAPI.archiveSession(id),
     onSuccess: () => {
       message.success('Session archived successfully');
-      queryClient.invalidateQueries(['sessions']);
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
     onError: (error) => {
       message.error(`Failed to archive session: ${error.response?.data?.message || error.message}`);
@@ -561,7 +561,7 @@ const SessionManagement = () => {
           setEditingSession(null);
           form.resetFields();
         }}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={600}
       >
         <Form

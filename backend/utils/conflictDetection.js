@@ -21,7 +21,8 @@ async function checkTeacherAvailability(teacherIds, dayIndex, slotIndex, current
     const query = {
       dayIndex,
       slotIndex,
-      teacherIds: { $in: teacherIds }
+      teacherIds: { $in: teacherIds },
+      isActive: true
     };
 
     if (excludeSlotId) {
@@ -31,7 +32,8 @@ async function checkTeacherAvailability(teacherIds, dayIndex, slotIndex, current
     const allConflicts = await RoutineSlot.find(query)
       .populate('subjectId', 'name code')
       .populate('teacherIds', 'fullName shortName')
-      .populate('roomId', 'name');
+      .populate('roomId', 'name')
+      .lean();
 
     // Filter conflicts based on semester group if currentSemester is provided
     let conflicts = allConflicts;
@@ -52,7 +54,7 @@ async function checkTeacherAvailability(teacherIds, dayIndex, slotIndex, current
         section: conflict.section,
         subjectName: conflict.subjectName || conflict.subjectId?.name,
         conflictingTeachers: conflict.teacherIds.filter(t => 
-          teacherIds.some(tid => tid.toString() === t._id.toString())
+          teacherIds.some(tid => tid.toString() === (t._id || t).toString())
         ),
         roomName: conflict.roomName_display || conflict.roomId?.name,
         classType: conflict.classType,
@@ -79,7 +81,8 @@ async function checkRoomAvailability(roomId, dayIndex, slotIndex, currentSemeste
     const query = {
       dayIndex,
       slotIndex,
-      roomId
+      roomId,
+      isActive: true
     };
 
     if (excludeSlotId) {
@@ -89,7 +92,8 @@ async function checkRoomAvailability(roomId, dayIndex, slotIndex, currentSemeste
     const allConflicts = await RoutineSlot.find(query)
       .populate('subjectId', 'name code')
       .populate('teacherIds', 'fullName shortName')
-      .populate('roomId', 'name');
+      .populate('roomId', 'name')
+      .lean();
 
     // Filter conflicts based on semester group if currentSemester is provided
     let conflict = null;
@@ -134,11 +138,11 @@ async function checkScheduleConflicts(slotData, excludeSlotId = null) {
   const { teacherIds, roomId, dayIndex, slotIndex, semester } = slotData;
 
   try {
-    // Check teacher conflicts - pass semester for semester group checking
-    const teacherCheck = await checkTeacherAvailability(teacherIds, dayIndex, slotIndex, semester, excludeSlotId);
-    
-    // Check room conflicts - pass semester for semester group checking
-    const roomCheck = await checkRoomAvailability(roomId, dayIndex, slotIndex, semester, excludeSlotId);
+    // Check teacher and room conflicts in parallel
+    const [teacherCheck, roomCheck] = await Promise.all([
+      checkTeacherAvailability(teacherIds, dayIndex, slotIndex, semester, excludeSlotId),
+      checkRoomAvailability(roomId, dayIndex, slotIndex, semester, excludeSlotId)
+    ]);
 
     return {
       hasConflicts: !teacherCheck.isAvailable || !roomCheck.isAvailable,
@@ -164,7 +168,8 @@ async function getTeacherScheduleConflicts(teacherId, semesterFilter = null) {
     })
       .populate('subjectId', 'name code')
       .populate('roomId', 'name')
-      .sort({ dayIndex: 1, slotIndex: 1 });
+      .sort({ dayIndex: 1, slotIndex: 1 })
+      .lean();
 
     // Group by time slots to identify overlaps
     const timeSlotMap = new Map();

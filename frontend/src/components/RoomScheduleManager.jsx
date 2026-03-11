@@ -34,7 +34,7 @@ import {
   BugOutlined
 } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { roomsAPI, timeSlotsAPI, routineSlotsAPI } from '../services/api';
+import { roomsAPI, timeSlotsAPI, routineSlotsAPI, roomVacancyAPI } from '../services/api';
 import RoutineGrid from './RoutineGrid';
 import RoomPDFActions from './RoomPDFActions';
 import SemesterGroupToggle from './SemesterGroupToggle';
@@ -71,9 +71,11 @@ const RoomScheduleManagerContent = () => {
   useRoutineChangeListener(queryClient, (changeData) => {
     console.log('🔔 Room schedule detected routine change:', changeData);
     
-    // If this change affects the selected room, force refresh
-    if (selectedRoomId && changeData.roomId === selectedRoomId) {
-      console.log('🔄 Forcing room schedule refresh due to relevant change');
+    // Always force refresh when any routine change happens
+    // The room might be affected even if its ID is not in the change data
+    // (e.g., when a class is cleared, the room ID might not be included)
+    if (selectedRoomId) {
+      console.log('🔄 Forcing room schedule refresh due to routine change');
       forceRefresh();
     }
   });
@@ -152,34 +154,30 @@ const RoomScheduleManagerContent = () => {
     queryFn: async () => {
       if (!selectedRoomId) {
         console.log('🔍 Room schedule query - no room selected');
-        return Promise.resolve(null);
+        return null;
       }
       
       try {
         console.log('🔍 Fetching room schedule for room:', selectedRoomId);
         
-        // Use the public room schedule endpoint
-        const response = await fetch(`/api/routines/rooms/${selectedRoomId}/schedule`);
+        // Use the API service which includes auth headers and proper base URL
+        const response = await roomVacancyAPI.getRoomSchedule(selectedRoomId);
+        console.log('📋 Room schedule API response:', response);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch room schedule: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('� Room schedule API response:', data);
-        
-        // The API should return the schedule data in the expected format
-        return data;
+        // axios wraps the response, so response.data is the JSON body
+        // Backend returns: { success, data: { room, routine, stats, academicYear } }
+        return response.data;
       } catch (error) {
         console.error('Error fetching room schedule:', error);
         throw new Error(`Failed to fetch room schedule: ${error.message}`);
       }
     },
     enabled: !!selectedRoomId,
-    staleTime: 60000, // Cache for 1 minute
-    retry: 1, // Only retry once on failure
+    staleTime: 0, // No stale time - always fetch fresh for real-time sync
+    gcTime: 30000, // Keep in garbage collection for 30s
+    refetchOnWindowFocus: true,
+    retry: 1,
     onError: (error) => {
-      // Show error message to user
       message.error(`Failed to load room schedule: ${error.message}`);
     }
   });
@@ -294,8 +292,8 @@ const RoomScheduleManagerContent = () => {
   const handleRoomChange = async (roomId) => {
     setSelectedRoomId(roomId);
     
-    // Use nuclear cache invalidation to ensure fresh data
-    await nukeAllRoutineRelatedCaches(queryClient);
+    // Invalidate the specific room schedule cache to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: ['roomSchedule', roomId] });
     
     // Check if this is Room BCT AB to enable special debugging
     await checkForRoomBCTAB(roomId);

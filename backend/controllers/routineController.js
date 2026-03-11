@@ -16,25 +16,7 @@ const { getTimeSlotsSorted, createTimeSlotMap } = require('../utils/timeSlotUtil
 const { getLabGroupsForSection, getSectionLabGroupLabel } = require('../utils/sectionUtils');
 const { getSemesterGroupName } = require('../utils/semesterGroupUtils');
 // Excel utilities have been removed
-const multer = require('multer');
-const path = require('path');
-// ExcelJS has been removed
 
-// Configure multer for file upload (keeping for API compatibility)
-const storage = multer.memoryStorage(); // Store files in memory for processing
-
-const fileFilter = (req, file, cb) => {
-  // This function is kept for API compatibility but will reject all files
-  cb(new Error('File upload functionality has been disabled.'), false);
-};
-
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-});
 
 // Enhanced validation helper functions
 const validateAssignClassData = async (data) => {
@@ -87,11 +69,10 @@ const validateAssignClassData = async (data) => {
   if (classType === 'BREAK') {
     // For breaks, only validate basic program and time slot existence
     try {
-      console.log('🔍 Validating break - checking program and timeSlot:', { programCode, slotIndex });
       
       const [program, timeSlot] = await Promise.all([
-        Program.findOne({ code: programCode.toUpperCase() }),
-        TimeSlot.findOne({ _id: slotIndex })
+        Program.findOne({ code: programCode.toUpperCase() }).lean(),
+        TimeSlot.findOne({ _id: slotIndex }).lean()
       ]);
 
       console.log('🔍 Break validation results:', {
@@ -111,18 +92,17 @@ const validateAssignClassData = async (data) => {
       console.error('Database validation error:', dbError);
     }
 
-    console.log('🔍 Break validation completed with errors:', errors);
     return errors;
   }
 
   // Validate IDs exist
   try {
     const [program, subject, teachers, room, timeSlot] = await Promise.all([
-      Program.findOne({ code: programCode.toUpperCase() }),
-      Subject.findById(subjectId),
-      Teacher.find({ _id: { $in: teacherIds }, isActive: true }),
-      Room.findById(roomId),
-      TimeSlot.findOne({ _id: slotIndex })
+      Program.findOne({ code: programCode.toUpperCase() }).lean(),
+      Subject.findById(subjectId).lean(),
+      Teacher.find({ _id: { $in: teacherIds }, isActive: true }).lean(),
+      Room.findById(roomId).lean(),
+      TimeSlot.findOne({ _id: slotIndex }).lean()
     ]);
 
     if (!program) {
@@ -153,8 +133,6 @@ const validateAssignClassData = async (data) => {
 
     // Allow multiple teachers for all class types, but log a warning for non-lab classes
     if (teachers && teachers.length > 1 && classType !== 'P') {
-      console.warn(`⚠️ Multiple teachers (${teachers.length}) assigned to non-lab class type "${classType}"`);
-      console.warn('⚠️ This is typically unusual but may be intentional (team teaching, co-teaching, etc.)');
       // Don't add to errors - allow it but log the warning
     }
     
@@ -162,8 +140,6 @@ const validateAssignClassData = async (data) => {
     // We'll handle default lab group in the controller (ALL)
     // This allows backward compatibility for older API calls without labGroup
     if (classType === 'P' && labGroup && !['A', 'B', 'C', 'D', 'ALL'].includes(labGroup)) {
-      console.warn(`⚠️ Invalid lab group provided: "${labGroup}"`);
-      console.warn('⚠️ Valid values are "A", "B", "C", "D", or "ALL". Will default to "ALL".');
       // Not adding error - we'll handle it with a default instead
     }
 
@@ -184,115 +160,7 @@ const areSemestersInSameGroup = (semester1, semester2) => {
 // Helper function to get semester group name for logging - imported from utils
 
 // Enhanced conflict detection with semester group awareness
-const checkAdvancedConflicts = async (data, existingSlotId = null) => {
-  const conflicts = [];
-  const { programCode, semester, section, dayIndex, slotIndex, teacherIds, roomId } = data;
 
-  try {
-    // Check for teacher conflicts - only within the same semester group
-    for (const teacherId of teacherIds) {
-      const teacherConflicts = await RoutineSlot.find({
-        dayIndex,
-        slotIndex,
-        teacherIds: teacherId,
-        ...(existingSlotId ? { _id: { $ne: existingSlotId } } : {})
-      }).populate('subjectId', 'name code')
-        .populate('roomId', 'name');
-
-      for (const conflict of teacherConflicts) {
-        // Only consider it a conflict if both semesters are in the same group
-        if (areSemestersInSameGroup(parseInt(semester), parseInt(conflict.semester))) {
-          const teacher = await Teacher.findById(teacherId);
-          
-          console.log(`🔴 Teacher conflict detected: ${teacher?.fullName || 'Unknown'} has classes in same semester group (${getSemesterGroupName(semester)}) at same time`);
-          
-          conflicts.push({
-            type: 'teacher',
-            resourceId: teacherId,
-            resourceName: teacher?.fullName || 'Unknown Teacher',
-            conflictDetails: {
-              programCode: conflict.programCode,
-              semester: conflict.semester,
-              section: conflict.section,
-              subjectName: conflict.subjectName_display || conflict.subjectId?.name,
-              subjectCode: conflict.subjectCode_display || conflict.subjectId?.code,
-              roomName: conflict.roomName_display || conflict.roomId?.name,
-              timeSlot: conflict.timeSlot_display,
-              semesterGroup: getSemesterGroupName(conflict.semester),
-              conflictReason: `Teacher is already teaching in ${getSemesterGroupName(conflict.semester)} semester group at this time`
-            }
-          });
-        } else {
-          console.log(`✅ No teacher conflict: ${semester} (${getSemesterGroupName(semester)}) and ${conflict.semester} (${getSemesterGroupName(conflict.semester)}) are in different semester groups`);
-        }
-      }
-    }
-
-    // Check for room conflicts - only within the same semester group
-    const roomConflicts = await RoutineSlot.find({
-      dayIndex,
-      slotIndex,
-      roomId,
-      ...(existingSlotId ? { _id: { $ne: existingSlotId } } : {})
-    }).populate('subjectId', 'name code')
-      .populate('teacherIds', 'fullName');
-
-    for (const conflict of roomConflicts) {
-      // Only consider it a conflict if both semesters are in the same group
-      if (areSemestersInSameGroup(parseInt(semester), parseInt(conflict.semester))) {
-        const room = await Room.findById(roomId);
-        
-        console.log(`🔴 Room conflict detected: ${room?.name || 'Unknown'} is being used by same semester group (${getSemesterGroupName(semester)}) at same time`);
-        
-        conflicts.push({
-          type: 'room',
-          resourceId: roomId,
-          resourceName: room?.name || 'Unknown Room',
-          conflictDetails: {
-            programCode: conflict.programCode,
-            semester: conflict.semester,
-            section: conflict.section,
-            subjectName: conflict.subjectName_display || conflict.subjectId?.name,
-            subjectCode: conflict.subjectCode_display || conflict.subjectId?.code,
-            teacherNames: conflict.teacherIds?.map(t => t.fullName) || [],
-            timeSlot: conflict.timeSlot_display,
-            semesterGroup: getSemesterGroupName(conflict.semester),
-            conflictReason: `Room is already occupied by ${getSemesterGroupName(conflict.semester)} semester group at this time`
-          }
-        });
-      } else {
-        console.log(`✅ No room conflict: ${semester} (${getSemesterGroupName(semester)}) and ${conflict.semester} (${getSemesterGroupName(conflict.semester)}) are in different semester groups`);
-      }
-    }
-
-    // Check for program-section conflicts (shouldn't happen but good to validate)
-    const sectionConflicts = await RoutineSlot.find({
-      programCode: programCode.toUpperCase(),
-      semester: parseInt(semester),
-      section: section.toUpperCase(),
-      dayIndex,
-      slotIndex,
-      ...(existingSlotId ? { _id: { $ne: existingSlotId } } : {})
-    });
-
-    if (sectionConflicts.length > 0) {
-      conflicts.push({
-        type: 'section',
-        resourceId: `${programCode}-${semester}-${section}`,
-        resourceName: `${programCode} Semester ${semester} Section ${section}`,
-        conflictDetails: {
-          message: 'This program-semester-section already has a class scheduled at this time'
-        }
-      });
-    }
-
-  } catch (error) {
-    console.error('Error checking conflicts:', error);
-    throw new Error('Failed to check for scheduling conflicts');
-  }
-
-  return conflicts;
-};
 
 // @desc    Get routine for specific program/semester/section
 // @route   GET /api/routines/:programCode/:semester/:section
@@ -301,10 +169,9 @@ exports.getRoutine = async (req, res) => {
   try {
     const { programCode, semester, section } = req.params;
     
-    console.log(`🎯 getRoutine API called for: ${programCode}-${semester}-${section}`);
 
     // Get program to validate programCode
-    const program = await Program.findOne({ code: programCode.toUpperCase() });
+    const program = await Program.findOne({ code: programCode.toUpperCase() }).lean();
     if (!program) {
       return res.status(404).json({
         success: false,
@@ -323,9 +190,9 @@ exports.getRoutine = async (req, res) => {
       .populate('subjectIds', 'name code') // Populate multiple subjects for electives
       .populate('teacherIds', 'fullName shortName')
       .populate('roomId', 'name')
-      .sort({ dayIndex: 1, slotIndex: 1 });
+      .sort({ dayIndex: 1, slotIndex: 1 })
+      .lean();
 
-    console.log(`Found ${routineSlots.length} routine slots for ${programCode}-${semester}-${section}`);
     
     // Build a map of spanId to all slot indexes for multi-period classes
     const spanIdToSlotIndexes = new Map();
@@ -338,14 +205,11 @@ exports.getRoutine = async (req, res) => {
       }
     });
     
-    console.log(`📊 Multi-period spans found: ${spanIdToSlotIndexes.size}`);
     
     // Debug: Log slots with lab groups
     const multiGroupSlots = routineSlots.filter(slot => slot.labGroup && ['A', 'B', 'C', 'D'].includes(slot.labGroup));
     if (multiGroupSlots.length > 0) {
-      console.log(`🔍 Found ${multiGroupSlots.length} multi-group slots:`);
       multiGroupSlots.forEach(slot => {
-        console.log(`   - Day ${slot.dayIndex}, Slot ${slot.slotIndex}, Group ${slot.labGroup}, Subject: ${slot.subjectId}`);
       });
     }
 
@@ -426,18 +290,13 @@ exports.getRoutine = async (req, res) => {
         // If slot already exists, convert to array or add to existing array
         const existing = routine[slot.dayIndex][slot.slotIndex];
         
-        console.log(`🔄 Found duplicate slot - Day ${slot.dayIndex}, Slot ${slot.slotIndex}`);
-        console.log(`   Existing: labGroup=${existing.labGroup || 'none'}, subject=${existing.subjectId}`);
-        console.log(`   New: labGroup=${slotData.labGroup || 'none'}, subject=${slotData.subjectId}`);
         
         if (Array.isArray(existing)) {
           // Already an array, add new slot
           existing.push(slotData);
-          console.log(`   Added to existing array, now has ${existing.length} items`);
         } else {
           // Convert single slot to array with both slots
           routine[slot.dayIndex][slot.slotIndex] = [existing, slotData];
-          console.log(`   Converted to array with 2 items`);
         }
       } else {
         // First slot for this time - store directly
@@ -445,7 +304,6 @@ exports.getRoutine = async (req, res) => {
       }
     });
 
-    console.log(`Built routine object with ${Object.keys(routine).length} days, total slots: ${Object.values(routine).reduce((total, day) => total + Object.keys(day).length, 0)}`);
 
     res.json({
       success: true,
@@ -492,7 +350,6 @@ exports.assignClass = async (req, res) => {
     // Parse forceAssign flag (can be string "true" or boolean true)
     forceAssign = forceAssign === true || forceAssign === 'true';
     
-    console.log('🚀 assignClass called - forceAssign:', forceAssign);
     
     // Validate basic required fields
     if (isNaN(dayIndex) || isNaN(slotIndex)) {
@@ -516,7 +373,6 @@ exports.assignClass = async (req, res) => {
       });
     }
 
-    console.log('🚀 assignClass called with params:', { programCode, semester, section });
     console.log('🚀 assignClass called with body:', {
       dayIndex,
       slotIndex,
@@ -538,10 +394,8 @@ exports.assignClass = async (req, res) => {
     
     // Fix for single period lab classes
     if (classType === 'P') {
-      console.log('⚠️ Lab class detected with labGroup:', labGroup);
       // Make labGroup optional for lab classes with a default value of 'ALL'
       if (!labGroup || !['A', 'B', 'C', 'D', 'ALL'].includes(labGroup)) {
-        console.log('⚠️ Setting default lab group to ALL');
         req.body.labGroup = 'ALL'; // Update the request body directly
         labGroup = 'ALL'; // Update local variable
       }
@@ -564,7 +418,6 @@ exports.assignClass = async (req, res) => {
       notes
     };
 
-    console.log('🚀 Validation data prepared:', JSON.stringify(validationData, null, 2));
 
     const validationErrors = await validateAssignClassData(validationData);
     if (validationErrors.length > 0) {
@@ -577,7 +430,6 @@ exports.assignClass = async (req, res) => {
       );
       
       if (isOnlyLabGroupError && classType === 'P') {
-        console.log('⚠️ Only lab group validation errors detected - proceeding anyway with default ALL');
         // Continue with the validation passed - we've set the default above
       } else {
         return res.status(400).json({
@@ -590,7 +442,6 @@ exports.assignClass = async (req, res) => {
 
     // Validate input arrays (skip for breaks)
     if (classType !== 'BREAK') {
-      console.log('🔍 Checking teacherIds:', { teacherIds, isArray: Array.isArray(teacherIds) });
       
       if (!teacherIds) {
         return res.status(400).json({
@@ -601,7 +452,6 @@ exports.assignClass = async (req, res) => {
       
       // Convert single teacherId to array if needed
       if (!Array.isArray(teacherIds)) {
-        console.log('⚠️ teacherIds is not an array, converting:', teacherIds);
         teacherIds = [teacherIds];
         req.body.teacherIds = teacherIds; // Update the request body
       }
@@ -624,14 +474,25 @@ exports.assignClass = async (req, res) => {
     }
 
     // Check if slot already exists for this program/semester/section (Update vs Create)
-    const existingSlot = await RoutineSlot.findOne({
+    const existingSlotQuery = {
       programCode: programCode.toUpperCase(),
       semester: parseInt(semester),
       section: section.toUpperCase(),
       dayIndex,
       slotIndex,
       semesterGroup: getSemesterGroupName(parseInt(semester))
-    });
+    };
+    // Include labGroup in query to prevent cross-contamination between Group A/B slots
+    if (classType === 'P') {
+      existingSlotQuery.labGroup = labGroup || 'ALL';
+    } else {
+      // For non-practical classes, look for slots without labGroup or with null
+      existingSlotQuery.$or = [
+        { labGroup: null },
+        { labGroup: { $exists: false } }
+      ];
+    }
+    const existingSlot = await RoutineSlot.findOne(existingSlotQuery);
 
     // Skip conflict detection for breaks
     if (classType !== 'BREAK') {
@@ -645,20 +506,31 @@ exports.assignClass = async (req, res) => {
         electiveGroupId: null
       };
 
-      // Use advanced conflict detection service
-      const advancedConflicts = await ConflictDetectionService.validateSchedule(conflictValidationData);
+      // If updating an existing slot, temporarily deactivate it so it's not detected as self-conflict
+      if (existingSlot) {
+        await RoutineSlot.findByIdAndUpdate(existingSlot._id, { isActive: false });
+      }
+
+      let advancedConflicts;
+      try {
+        // Use advanced conflict detection service
+        advancedConflicts = await ConflictDetectionService.validateSchedule(conflictValidationData);
+      } finally {
+        // Re-activate the slot regardless of outcome
+        if (existingSlot) {
+          await RoutineSlot.findByIdAndUpdate(existingSlot._id, { isActive: true });
+        }
+      }
       
       // Also run basic conflict detection for backward compatibility
-      const basicConflicts = await checkAdvancedConflicts(validationData, existingSlot?._id);
+      
       
       // Combine both conflict detection results
-      const allConflicts = [...advancedConflicts, ...basicConflicts];
+      const allConflicts = advancedConflicts;
       
       if (allConflicts.length > 0) {
         // If forceAssign is true, log the conflicts but allow the assignment
         if (forceAssign) {
-          console.warn('⚠️ FORCING assignment despite conflicts (forceAssign=true)');
-          console.warn('⚠️ Conflicts being ignored:', allConflicts.length);
           allConflicts.forEach((conflict, idx) => {
             console.warn(`  Conflict ${idx + 1}:`, conflict.message || conflict);
           });
@@ -682,8 +554,8 @@ exports.assignClass = async (req, res) => {
     if (classType === 'BREAK') {
       // For breaks, we only need timeSlot and program
       [timeSlot, program] = await Promise.all([
-        TimeSlot.findOne({ _id: slotIndex }),
-        Program.findOne({ code: programCode.toUpperCase() })
+        TimeSlot.findOne({ _id: slotIndex }).lean(),
+        Program.findOne({ code: programCode.toUpperCase() }).lean()
       ]);
       subject = null;
       teachers = [];
@@ -691,11 +563,11 @@ exports.assignClass = async (req, res) => {
     } else {
       // For regular classes, get all reference data
       [subject, teachers, room, timeSlot, program] = await Promise.all([
-        Subject.findById(subjectId),
-        Teacher.find({ _id: { $in: teacherIds }, isActive: true }),
-        Room.findById(roomId),
-        TimeSlot.findOne({ _id: slotIndex }),
-        Program.findOne({ code: programCode.toUpperCase() })
+        Subject.findById(subjectId).lean(),
+        Teacher.find({ _id: { $in: teacherIds }, isActive: true }).lean(),
+        Room.findById(roomId).lean(),
+        TimeSlot.findOne({ _id: slotIndex }).lean(),
+        Program.findOne({ code: programCode.toUpperCase() }).lean()
       ]);
     }
 
@@ -780,7 +652,6 @@ exports.assignClass = async (req, res) => {
     try {
       if (existingSlot) {
         // Update existing slot
-        console.log('✏️  UPDATING EXISTING SLOT:', existingSlot._id);
         console.log('✏️  Old values:', {
           subjectId: existingSlot.subjectId,
           teacherIds: existingSlot.teacherIds,
@@ -800,7 +671,6 @@ exports.assignClass = async (req, res) => {
           { new: true, runValidators: true }
         );
         
-        console.log('✅ SLOT UPDATED SUCCESSFULLY:', routineSlot._id);
         console.log('✅ Updated slot data:', {
           subjectId: routineSlot.subjectId,
           teacherIds: routineSlot.teacherIds,
@@ -810,9 +680,7 @@ exports.assignClass = async (req, res) => {
         });
       } else {
         // Create new slot
-        console.log('➕ CREATING NEW SLOT');
         routineSlot = await RoutineSlot.create(slotData);
-        console.log('✅ SLOT CREATED SUCCESSFULLY:', routineSlot._id);
       }
     } catch (dbError) {
       console.error('❌ Database error when saving slot:', dbError.message);
@@ -852,7 +720,6 @@ exports.assignClass = async (req, res) => {
             dayIndex,
             slotIndex
           });
-          console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
         } catch (queueServiceError) {
           console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueServiceError.message);
           // Continue without failing
@@ -909,7 +776,6 @@ exports.assignClass = async (req, res) => {
 // @route   POST /api/routines/assign-class-spanned
 // @access  Private/Admin
 exports.assignClassSpanned = async (req, res) => {
-  console.log('🔄 assignClassSpanned called with data:', JSON.stringify(req.body, null, 2));
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -929,7 +795,6 @@ exports.assignClassSpanned = async (req, res) => {
     if (!isTestEnvironment) {
       session = await mongoose.startSession();
       session.startTransaction();
-      console.log('Started MongoDB transaction session');
     }
   } catch (sessionError) {
     console.error('Failed to start MongoDB transaction session:', sessionError);
@@ -982,7 +847,6 @@ exports.assignClassSpanned = async (req, res) => {
           ? new mongoose.Types.ObjectId(spanId) 
           : spanId;
       } catch (err) {
-        console.warn('⚠️  Could not convert spanId to ObjectId:', err);
         spanIdObjectId = spanId;
       }
     }
@@ -1011,14 +875,12 @@ exports.assignClassSpanned = async (req, res) => {
     let finalAcademicYearId = academicYearId;
 
     if (!finalProgramId || !finalAcademicYearId) {
-      console.log('🔍 Looking up missing programId and/or academicYearId...');
       
       // Look up program by code if programId is missing
       if (!finalProgramId && programCode) {
         const program = await Program.findOne({ code: programCode.toUpperCase() });
         if (program) {
           finalProgramId = program._id;
-          console.log('✅ Found programId:', finalProgramId);
         } else {
           return res.status(400).json({
             success: false,
@@ -1032,7 +894,6 @@ exports.assignClassSpanned = async (req, res) => {
         const academicYear = await AcademicCalendar.findOne({ status: 'active' });
         if (academicYear) {
           finalAcademicYearId = academicYear._id;
-          console.log('✅ Found active academicYearId:', finalAcademicYearId);
         } else {
           return res.status(400).json({
             success: false,
@@ -1057,11 +918,9 @@ exports.assignClassSpanned = async (req, res) => {
       return slotId;
     });
     
-    console.log('✅ Using slot IDs directly as slot indexes:', actualSlotIndexes);
 
     // Special handling for "bothGroups" lab classes - Create separate slots for each group
     if (labGroupType === 'bothGroups' && classType === 'P') {
-      console.log('🔄 Processing bothGroups lab class - creating separate assignments for each group');
       
       // Validate that both groups have the required data
       const sectionGroups = getLabGroupsForSection(section);
@@ -1102,6 +961,76 @@ exports.assignClassSpanned = async (req, res) => {
         }
       ];
       
+      // Run conflict checks for bothGroups unless forceAssign is set
+      if (!shouldForceAssign) {
+        for (const groupAssignment of groupAssignments) {
+          for (const slotIndex of actualSlotIndexes) {
+            // Teacher conflict check
+            for (const teacherId of groupAssignment.teacherIds) {
+              const teacherConflicts = await RoutineSlot.find({
+                dayIndex,
+                slotIndex,
+                teacherIds: teacherId,
+                isActive: true
+              }).populate('subjectId', 'name').populate('roomId', 'name');
+
+              for (const tc of teacherConflicts) {
+                if (areSemestersInSameGroup(parseInt(semester), parseInt(tc.semester))) {
+                  const teacher = await Teacher.findById(teacherId);
+                  return res.status(409).json({
+                    success: false,
+                    message: `Teacher conflict detected for Group ${groupAssignment.labGroup}`,
+                    conflict: {
+                      type: 'teacher',
+                      teacherName: teacher?.fullName,
+                      labGroup: groupAssignment.labGroup,
+                      slotIndex,
+                      conflictDetails: {
+                        programCode: tc.programCode,
+                        semester: tc.semester,
+                        section: tc.section,
+                        subjectName: tc.subjectName_display || tc.subjectId?.name,
+                        roomName: tc.roomName_display || tc.roomId?.name
+                      }
+                    }
+                  });
+                }
+              }
+            }
+
+            // Room conflict check
+            const roomConflicts = await RoutineSlot.find({
+              dayIndex,
+              slotIndex,
+              roomId: groupAssignment.roomId,
+              isActive: true
+            }).populate('subjectId', 'name');
+
+            for (const rc of roomConflicts) {
+              if (areSemestersInSameGroup(parseInt(semester), parseInt(rc.semester))) {
+                const room = await Room.findById(groupAssignment.roomId);
+                return res.status(409).json({
+                  success: false,
+                  message: `Room conflict detected for Group ${groupAssignment.labGroup}`,
+                  conflict: {
+                    type: 'room',
+                    roomName: room?.name,
+                    labGroup: groupAssignment.labGroup,
+                    slotIndex,
+                    conflictDetails: {
+                      programCode: rc.programCode,
+                      semester: rc.semester,
+                      section: rc.section,
+                      subjectName: rc.subjectName_display || rc.subjectId?.name
+                    }
+                  }
+                });
+              }
+            }
+          }
+        }
+      }
+
       const createdSlotGroups = [];
       
       for (const groupAssignment of groupAssignments) {
@@ -1183,7 +1112,6 @@ exports.assignClassSpanned = async (req, res) => {
       if (session) {
         try {
           await session.commitTransaction();
-          console.log('Successfully committed transaction for bothGroups');
           session.endSession();
         } catch (commitError) {
           console.error('Error committing transaction:', commitError);
@@ -1211,7 +1139,6 @@ exports.assignClassSpanned = async (req, res) => {
             'teacher_routine_updates', 
             { affectedTeacherIds }
           );
-          console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
         } catch (queueServiceError) {
           console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueServiceError.message);
         }
@@ -1247,17 +1174,13 @@ exports.assignClassSpanned = async (req, res) => {
     
     // If this is a lab class (classType === 'P') but no labGroup is specified, default to 'ALL'
     if (classType === 'P' && (!labGroup || !['A', 'B', 'C', 'D', 'ALL'].includes(labGroup))) {
-      console.log('⚠️ Lab class detected in spanned assignment but labGroup not specified - defaulting to ALL');
       labGroup = 'ALL'; // Default to ALL if not specified for backward compatibility
     }
 
     // 2. Check for collisions for each slotIndex - with semester group awareness
     // Skip conflict checks if forceAssign is true
     if (!shouldForceAssign) {
-      console.log('🔍 Checking conflicts for multi-period class...');
       if (isUpdateOperation) {
-        console.log('🔄 UPDATE mode - will exclude slots with spanId:', spanIdObjectId);
-        console.log('🔄 spanId type:', typeof spanIdObjectId, 'value:', spanIdObjectId);
       }
       
       for (const slotIndex of actualSlotIndexes) {
@@ -1266,22 +1189,20 @@ exports.assignClassSpanned = async (req, res) => {
           const conflictQuery = {
             dayIndex,
             slotIndex,
-            teacherIds: teacherId
+            teacherIds: teacherId,
+            isActive: true
           };
           
           // If updating, exclude slots with the same spanId
           if (isUpdateOperation && spanIdObjectId) {
             conflictQuery.spanId = { $ne: spanIdObjectId };
-            console.log('🔍 Conflict query with spanId exclusion:', JSON.stringify(conflictQuery));
           }
           
           const teacherConflicts = await RoutineSlot.find(conflictQuery)
           .populate('subjectId', 'name')
           .populate('roomId', 'name');
           
-        console.log(`🔍 Found ${teacherConflicts.length} potential teacher conflicts for slot ${slotIndex}`);
         if (teacherConflicts.length > 0 && isUpdateOperation) {
-          console.log('🔍 Conflicts spanIds:', teacherConflicts.map(c => ({ spanId: c.spanId?.toString(), id: c._id.toString() })));
         }
 
         for (const teacherConflict of teacherConflicts) {
@@ -1289,7 +1210,6 @@ exports.assignClassSpanned = async (req, res) => {
           if (areSemestersInSameGroup(parseInt(semester), parseInt(teacherConflict.semester))) {
             const teacher = await Teacher.findById(teacherId);
             
-            console.log(`🔴 Spanned class teacher conflict detected: ${teacher?.fullName || 'Unknown'} has classes in same semester group (${getSemesterGroupName(semester)}) at same time`);
             
             return res.status(409).json({
               success: false,
@@ -1310,7 +1230,6 @@ exports.assignClassSpanned = async (req, res) => {
               }
             });
           } else {
-            console.log(`✅ No spanned class teacher conflict: ${semester} (${getSemesterGroupName(semester)}) and ${teacherConflict.semester} (${getSemesterGroupName(teacherConflict.semester)}) are in different semester groups`);
           }
         }
       }
@@ -1319,7 +1238,8 @@ exports.assignClassSpanned = async (req, res) => {
       const roomConflictQuery = {
         dayIndex,
         slotIndex,
-        roomId
+        roomId,
+        isActive: true
       };
       
       // If updating, exclude slots with the same spanId
@@ -1335,7 +1255,6 @@ exports.assignClassSpanned = async (req, res) => {
         if (areSemestersInSameGroup(parseInt(semester), parseInt(roomConflict.semester))) {
           const room = await Room.findById(roomId);
           
-          console.log(`🔴 Spanned class room conflict detected: ${room?.name || 'Unknown'} is being used by same semester group (${getSemesterGroupName(semester)}) at same time`);
           
           return res.status(409).json({
             success: false,
@@ -1355,7 +1274,6 @@ exports.assignClassSpanned = async (req, res) => {
             }
           });
         } else {
-          console.log(`✅ No spanned class room conflict: ${semester} (${getSemesterGroupName(semester)}) and ${roomConflict.semester} (${getSemesterGroupName(roomConflict.semester)}) are in different semester groups`);
         }
       }
 
@@ -1366,8 +1284,14 @@ exports.assignClassSpanned = async (req, res) => {
         section: section.toUpperCase(),
         dayIndex,
         slotIndex,
-        semesterGroup: getSemesterGroupName(parseInt(semester))
+        semesterGroup: getSemesterGroupName(parseInt(semester)),
+        isActive: true
       };
+      
+      // For practical classes, include labGroup so different lab groups don't falsely conflict
+      if (classType === 'P') {
+        slotExistQuery.labGroup = labGroup || 'ALL';
+      }
       
       // If updating, exclude slots with the same spanId
       if (isUpdateOperation && spanIdObjectId) {
@@ -1394,7 +1318,6 @@ exports.assignClassSpanned = async (req, res) => {
       }
     }
     } else {
-      console.warn('⚠️ FORCING multi-period assignment despite potential conflicts (forceAssign=true)');
     }
 
     // 3. Get denormalized display data
@@ -1413,18 +1336,15 @@ exports.assignClassSpanned = async (req, res) => {
     // If this is an update, use the existing spanId; otherwise create new one
     const finalSpanId = (isUpdateOperation && spanIdObjectId) ? spanIdObjectId : new mongoose.Types.ObjectId();
     
-    console.log('📋 Using spanId:', finalSpanId, isUpdateOperation ? '(existing - UPDATE)' : '(new - CREATE)');
     
     // 4b. If this is an update, delete existing slots with this spanId
     if (isUpdateOperation && spanIdObjectId) {
-      console.log('🗑️  UPDATE mode: Deleting existing slots with spanId:', spanIdObjectId);
       
       const deleteQuery = { spanId: spanIdObjectId };
       const deleteResult = session ?
         await RoutineSlot.deleteMany(deleteQuery).session(session) :
         await RoutineSlot.deleteMany(deleteQuery);
       
-      console.log('✅ Deleted', deleteResult.deletedCount, 'existing slots with spanId:', spanIdObjectId);
     }
     
     // 5. Create routine slots for each slotIndex within transaction
@@ -1493,7 +1413,6 @@ exports.assignClassSpanned = async (req, res) => {
     if (session) {
       try {
         await session.commitTransaction();
-        console.log('Successfully committed transaction');
         session.endSession();
       } catch (commitError) {
         console.error('Error committing transaction:', commitError);
@@ -1519,7 +1438,6 @@ exports.assignClassSpanned = async (req, res) => {
         .filter(id => id != null && id !== undefined)
         .map(id => typeof id === 'object' && id._id ? id._id.toString() : id.toString());
       
-      console.log('Processing affected teacher IDs:', affectedTeacherIds);
       
       if (affectedTeacherIds.length > 0) {
         // Try to load queue service dynamically
@@ -1529,7 +1447,6 @@ exports.assignClassSpanned = async (req, res) => {
             'teacher_routine_updates', 
             { affectedTeacherIds }
           );
-          console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
         } catch (queueServiceError) {
           console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueServiceError.message);
           // Continue without failing
@@ -1545,7 +1462,6 @@ exports.assignClassSpanned = async (req, res) => {
           for (const teacherId of teacherIds) {
             try {
               // Teacher schedule generation has been disabled
-              console.log(`Teacher schedule generation disabled for teacher ${teacherId}`);
             } catch (error) {
               console.error(`Error in disabled teacher schedule generation for teacher ${teacherId}:`, error);
             }
@@ -1570,7 +1486,6 @@ exports.assignClassSpanned = async (req, res) => {
     if (session) {
       try {
         await session.abortTransaction();
-        console.log('Transaction aborted due to error');
       } catch (abortError) {
         console.error('Error aborting transaction:', abortError);
       } finally {
@@ -1622,16 +1537,29 @@ exports.assignClassSpanned = async (req, res) => {
 exports.clearClass = async (req, res) => {
   try {
     const { programCode, semester, section } = req.params;
-    const { dayIndex, slotIndex } = req.body;
+    const { dayIndex, slotIndex, labGroup, slotId } = req.body;
 
-    const routineSlot = await RoutineSlot.findOne({
-      programCode: programCode.toUpperCase(),
-      semester: parseInt(semester),
-      section: section.toUpperCase(),
-      dayIndex,
-      slotIndex,
-      semesterGroup: getSemesterGroupName(parseInt(semester))
-    });
+    // If a specific slot ID is provided, use it directly
+    let routineSlot;
+    if (slotId) {
+      routineSlot = await RoutineSlot.findById(slotId);
+    } else {
+      const clearQuery = {
+        programCode: programCode.toUpperCase(),
+        semester: parseInt(semester),
+        section: section.toUpperCase(),
+        dayIndex,
+        slotIndex,
+        semesterGroup: getSemesterGroupName(parseInt(semester))
+      };
+      
+      // Include labGroup in query if provided to avoid deleting the wrong lab group's slot
+      if (labGroup) {
+        clearQuery.labGroup = labGroup;
+      }
+      
+      routineSlot = await RoutineSlot.findOne(clearQuery);
+    }
 
     if (!routineSlot) {
       return res.status(404).json({
@@ -1646,7 +1574,6 @@ exports.clearClass = async (req, res) => {
     // Hard delete - completely remove from database
     await RoutineSlot.findByIdAndDelete(routineSlot._id);
     
-    console.log(`✅ Class deleted: ${programCode.toUpperCase()}-${semester}-${section.toUpperCase()}, Day: ${dayIndex}, Slot: ${slotIndex}, ID: ${routineSlot._id}`);
 
     // Publish message to queue for teacher schedule regeneration (following architecture documentation)
     try {
@@ -1665,7 +1592,6 @@ exports.clearClass = async (req, res) => {
             'teacher_routine_updates', 
             { affectedTeacherIds }
           );
-          console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
         } catch (queueServiceError) {
           console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueServiceError.message);
           // Continue without failing
@@ -1680,7 +1606,6 @@ exports.clearClass = async (req, res) => {
         for (const teacherId of affectedTeachers) {
           try {
             // Teacher schedule generation has been disabled
-            console.log(`Teacher schedule generation disabled for teacher ${teacherId}`);
           } catch (error) {
             console.error(`Error in disabled teacher schedule generation for teacher ${teacherId}:`, error);
           }
@@ -1750,7 +1675,6 @@ exports.clearEntireRoutine = async (req, res) => {
       section: section.toUpperCase()
     });
 
-    console.log(`✅ Entire routine deleted: ${programCode.toUpperCase()}-${semester}-${section.toUpperCase()}, removed ${deleteResult.deletedCount} slots from database`);
 
     // Publish message to queue for teacher schedule regeneration
     try {
@@ -1762,7 +1686,6 @@ exports.clearEntireRoutine = async (req, res) => {
             'teacher_routine_updates', 
             { affectedTeacherIds: uniqueTeacherIds }
           );
-          console.log(`[Queue] Queued schedule updates for teachers: ${uniqueTeacherIds.join(', ')}`);
         } catch (queueServiceError) {
           console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueServiceError.message);
           // Continue without failing
@@ -1776,7 +1699,6 @@ exports.clearEntireRoutine = async (req, res) => {
         for (const teacherId of uniqueTeacherIds) {
           try {
             // Teacher schedule generation has been disabled
-            console.log(`Teacher schedule generation disabled for teacher ${teacherId}`);
           } catch (error) {
             console.error(`Error in disabled teacher schedule generation for teacher ${teacherId}:`, error);
           }
@@ -1867,13 +1789,22 @@ exports.getProgramRoutines = async (req, res) => {
 exports.checkRoomAvailability = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { dayIndex, slotIndex, semester } = req.query;
+    const { dayIndex, slotIndex, semester, excludeSlotId, excludeSpanId } = req.query;
 
     if (dayIndex === undefined || slotIndex === undefined) {
       return res.status(400).json({
         success: false,
         message: 'dayIndex and slotIndex are required'
       });
+    }
+
+    // Build exclusion filter for self-conflict avoidance when editing
+    const exclusionFilter = {};
+    if (excludeSlotId) {
+      exclusionFilter._id = { $ne: excludeSlotId };
+    }
+    if (excludeSpanId) {
+      exclusionFilter.spanId = { $ne: excludeSpanId };
     }
 
     // Enhanced availability checking that handles spanned classes with semester group awareness
@@ -1884,7 +1815,8 @@ exports.checkRoomAvailability = async (req, res) => {
       dayIndex: parseInt(dayIndex),
       slotIndex: parseInt(slotIndex),
       roomId: roomId,
-      isActive: true
+      isActive: true,
+      ...exclusionFilter
     }).populate('subjectId', 'name')
       .populate('teacherIds', 'fullName shortName');
 
@@ -1901,12 +1833,20 @@ exports.checkRoomAvailability = async (req, res) => {
 
     if (!conflict) {
       // Check for spanned class conflicts - room might be busy in a class that spans this slot
-      const spanConflicts = await RoutineSlot.find({
+      const spanQuery = {
         dayIndex: parseInt(dayIndex),
         roomId: roomId,
         isActive: true,
         spanId: { $ne: null } // Only check spanned classes
-      }).populate('subjectId', 'name')
+      };
+      if (excludeSpanId) {
+        spanQuery.spanId = { $ne: excludeSpanId };
+      }
+      if (excludeSlotId) {
+        spanQuery._id = { $ne: excludeSlotId };
+      }
+      const spanConflicts = await RoutineSlot.find(spanQuery)
+        .populate('subjectId', 'name')
         .populate('teacherIds', 'fullName shortName');
 
       // Filter by semester group if semester is provided
@@ -1975,7 +1915,6 @@ exports.exportRoutineToPDF = async (req, res) => {
     const { programCode, semester, section } = req.params;
     const { format = 'download', startDate, endDate } = req.query; // Add startDate and endDate from query
     
-    console.log(`📄 PDF export requested: ${programCode}-${semester}-${section}, format: ${format}, dates: ${startDate} to ${endDate}`);
 
     // Import PDF service
     const PDFRoutineService = require('../services/PDFRoutineService');
@@ -2009,7 +1948,6 @@ exports.exportRoutineToPDF = async (req, res) => {
     
     res.setHeader('Content-Length', pdfBuffer.length);
 
-    console.log(`✅ PDF generated successfully: ${filename} (${pdfBuffer.length} bytes)`);
     
     // Send the PDF buffer
     res.send(pdfBuffer);
@@ -2032,7 +1970,6 @@ exports.exportAllSemesterRoutinesToPDF = async (req, res) => {
     const { programCode, semester } = req.params;
     const { format = 'download' } = req.query; // 'download' or 'inline'
     
-    console.log(`📄 All semester PDF export requested: ${programCode}-${semester}, format: ${format}`);
 
     // Import PDF service
     const PDFRoutineService = require('../services/PDFRoutineService');
@@ -2064,7 +2001,6 @@ exports.exportAllSemesterRoutinesToPDF = async (req, res) => {
     
     res.setHeader('Content-Length', pdfBuffer.length);
 
-    console.log(`✅ Combined PDF generated successfully: ${filename} (${pdfBuffer.length} bytes)`);
     
     // Send the PDF buffer
     res.send(pdfBuffer);
@@ -2115,7 +2051,6 @@ exports.exportRoutineToExcel = async (req, res) => {
 // @access  Private/Admin
 exports.importRoutineFromExcel = async (req, res) => {
   try {
-    console.log('Excel import functionality has been disabled.');
     
     if (!req.file) {
       return res.status(400).json({
@@ -2155,7 +2090,6 @@ exports.importRoutineFromExcel = async (req, res) => {
 exports.validateRoutineImport = [
   async (req, res) => {
     try {
-      console.log('Excel import functionality has been disabled.');
       
       // Return a message that Excel import is disabled
       return res.status(400).json({
@@ -2178,7 +2112,6 @@ exports.validateRoutineImport = [
 // @access  Public
 exports.downloadImportTemplate = async (req, res) => {
   try {
-    console.log('Excel functionality has been disabled.');
     
     // Return a message that Excel export is disabled
     return res.status(400).json({
@@ -2232,7 +2165,6 @@ exports.clearSpanGroup = async (req, res) => {
       });
     }
 
-    console.log(`✅ Span group deleted: ${spanId}, removed ${deleteResult.deletedCount} slots from database`);
     
     // Publish message to queue for teacher schedule regeneration
     try {
@@ -2249,7 +2181,6 @@ exports.clearSpanGroup = async (req, res) => {
           'teacher_routine_updates', 
           { affectedTeacherIds }
         );
-        console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
       }
     } catch (queueError) {
       console.error('CRITICAL: Failed to queue teacher schedule updates. Manual regeneration may be required.', queueError);
@@ -2259,7 +2190,6 @@ exports.clearSpanGroup = async (req, res) => {
       setImmediate(async () => {
         for (const teacherId of teacherIds) {
           try {
-            console.log(`Teacher schedule generation disabled for teacher ${teacherId}`);
           } catch (error) {
             console.error(`Error in disabled teacher schedule generation for teacher ${teacherId}:`, error);
           }
@@ -2291,7 +2221,7 @@ exports.clearSpanGroup = async (req, res) => {
 exports.checkTeacherAvailability = async (req, res) => {
   try {
     const { teacherId } = req.params;
-    const { dayIndex, slotIndex, semester } = req.query;
+    const { dayIndex, slotIndex, semester, excludeSlotId, excludeSpanId } = req.query;
 
     if (dayIndex === undefined || slotIndex === undefined) {
       return res.status(400).json({
@@ -2309,6 +2239,15 @@ exports.checkTeacherAvailability = async (req, res) => {
       });
     }
 
+    // Build exclusion filter for self-conflict avoidance when editing
+    const exclusionFilter = {};
+    if (excludeSlotId) {
+      exclusionFilter._id = { $ne: excludeSlotId };
+    }
+    if (excludeSpanId) {
+      exclusionFilter.spanId = { $ne: excludeSpanId };
+    }
+
     // Enhanced availability checking that handles spanned classes with semester group awareness
     let conflict = null;
     
@@ -2317,7 +2256,8 @@ exports.checkTeacherAvailability = async (req, res) => {
       dayIndex: parseInt(dayIndex),
       slotIndex: parseInt(slotIndex),
       teacherIds: teacherId,
-      isActive: true
+      isActive: true,
+      ...exclusionFilter
     };
 
     const directConflicts = await RoutineSlot.find(directConflictQuery, {
@@ -2349,12 +2289,19 @@ exports.checkTeacherAvailability = async (req, res) => {
 
     if (!conflict) {
       // Check for spanned class conflicts - teacher might be busy in a class that spans this slot
-      const spanConflicts = await RoutineSlot.find({
+      const spanQuery = {
         dayIndex: parseInt(dayIndex),
         teacherIds: teacherId,
         isActive: true,
         spanId: { $ne: null } // Only check spanned classes
-      }, {
+      };
+      if (excludeSpanId) {
+        spanQuery.spanId = { $ne: excludeSpanId };
+      }
+      if (excludeSlotId) {
+        spanQuery._id = { $ne: excludeSlotId };
+      }
+      const spanConflicts = await RoutineSlot.find(spanQuery, {
         programCode: 1,
         semester: 1,
         section: 1,
@@ -2799,7 +2746,6 @@ exports.scheduleElectiveClass = async (req, res) => {
 // @route   POST /api/routines/electives/schedule-spanned
 // @access  Private/Admin
 exports.scheduleElectiveClassSpanned = async (req, res) => {
-  console.log('🔄 scheduleElectiveClassSpanned called with data:', JSON.stringify(req.body, null, 2));
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -2819,7 +2765,6 @@ exports.scheduleElectiveClassSpanned = async (req, res) => {
     if (!isTestEnvironment) {
       session = await mongoose.startSession();
       session.startTransaction();
-      console.log('Started MongoDB transaction session');
     }
   } catch (sessionError) {
     console.error('Failed to start MongoDB transaction session:', sessionError);
@@ -2909,7 +2854,6 @@ exports.scheduleElectiveClassSpanned = async (req, res) => {
       return slotId;
     });
     
-    console.log('✅ Using slot IDs directly as slot indexes:', actualSlotIndexes);
 
     // Prepare elective slot data for conflict detection for each slot
     for (const slotIndex of actualSlotIndexes) {
@@ -3055,7 +2999,6 @@ exports.scheduleElectiveClassSpanned = async (req, res) => {
     if (session) {
       try {
         await session.commitTransaction();
-        console.log('Successfully committed transaction for spanned electives');
         session.endSession();
       } catch (commitError) {
         console.error('Error committing transaction:', commitError);
@@ -3082,7 +3025,6 @@ exports.scheduleElectiveClassSpanned = async (req, res) => {
           'teacher_routine_updates', 
           { affectedTeacherIds }
         );
-        console.log(`[Queue] Queued schedule updates for teachers: ${affectedTeacherIds.join(', ')}`);
       } catch (queueServiceError) {
         console.warn('Queue service unavailable, skipping teacher schedule update queue:', queueServiceError.message);
       }
@@ -3482,13 +3424,14 @@ exports.getRoomSchedule = async (req, res) => {
     const { roomId } = req.params;
     const { academicYear } = req.query;
 
-    // Get current academic year if not provided
-    const currentAcademicYear = academicYear ? 
-      await AcademicCalendar.findById(academicYear) :
-      await AcademicCalendar.findOne({ isCurrentYear: true });
+    // Fetch room and academic year in parallel
+    const [room, currentAcademicYear] = await Promise.all([
+      Room.findById(roomId).lean(),
+      academicYear 
+        ? AcademicCalendar.findById(academicYear).lean()
+        : AcademicCalendar.findOne({ isCurrentYear: true }).lean()
+    ]);
 
-    // Get room info
-    const room = await Room.findById(roomId);
     if (!room) {
       return res.status(404).json({
         success: false,
@@ -3498,7 +3441,6 @@ exports.getRoomSchedule = async (req, res) => {
 
     // If no academic year found, return empty schedule instead of 404
     if (!currentAcademicYear) {
-      console.log('No current academic year found, returning empty room schedule');
       return res.json({
         success: true,
         data: {
@@ -3526,7 +3468,8 @@ exports.getRoomSchedule = async (req, res) => {
     })
     .populate('teacherIds', 'fullName shortName')
     .populate('subjectId', 'name code')
-    .sort({ dayIndex: 1, slotIndex: 1 });
+    .sort({ dayIndex: 1, slotIndex: 1 })
+    .lean();
 
     // Build routine structure using the EXACT SAME logic as class routine
     const routine = {};
@@ -3576,18 +3519,13 @@ exports.getRoomSchedule = async (req, res) => {
         // If slot already exists, convert to array or add to existing array
         const existing = routine[slot.dayIndex][slot.slotIndex];
         
-        console.log(`🔄 Found duplicate room slot - Day ${slot.dayIndex}, Slot ${slot.slotIndex}`);
-        console.log(`   Existing: semester=${existing.semester || existing[0]?.semester} (${existing.semesterGroup || existing[0]?.semesterGroup}), subject=${existing.subjectName || existing[0]?.subjectName}`);
-        console.log(`   New: semester=${slotData.semester} (${slotData.semesterGroup}), subject=${slotData.subjectName}`);
         
         if (Array.isArray(existing)) {
           // Already an array, add new slot
           existing.push(slotData);
-          console.log(`   Added to existing array, now has ${existing.length} items`);
         } else {
           // Convert single slot to array with both slots
           routine[slot.dayIndex][slot.slotIndex] = [existing, slotData];
-          console.log(`   Converted to array with 2 items`);
         }
       } else {
         // First class for this time slot
@@ -3611,7 +3549,6 @@ exports.getRoomSchedule = async (req, res) => {
       quietDay: getQuietUtilizationDay(routine)
     };
 
-    console.log(`Room ${room.name} schedule generated with ${routineSlots.length} classes across ${stats.busyDays} days`);
 
     res.json({
       success: true,
@@ -3677,7 +3614,6 @@ exports.getVacantRooms = async (req, res) => {
     if (currentAcademicYear) {
       routineSlotFilter.academicYearId = currentAcademicYear._id;
     } else {
-      console.log('⚠️  No academic year found, fetching all routine slots without year filtering');
     }
 
     // Build room filter criteria
@@ -3813,7 +3749,6 @@ exports.getRoomVacancyForDay = async (req, res) => {
     if (currentAcademicYear) {
       routineSlotFilter.academicYearId = currentAcademicYear._id;
     } else {
-      console.log('⚠️  No academic year found, fetching all routine slots without year filtering');
     }
 
     // Build room filter criteria
@@ -3974,7 +3909,6 @@ exports.getRoomVacancyAnalytics = async (req, res) => {
     if (currentAcademicYear) {
       routineSlotFilter.academicYearId = currentAcademicYear._id;
     } else {
-      console.log('⚠️  No academic year found, fetching all routine slots without year filtering');
     }
 
     // Build room filter criteria
@@ -4200,7 +4134,6 @@ exports.getVacantTeachers = async (req, res) => {
     if (currentAcademicYear) {
       routineSlotFilter.academicYearId = currentAcademicYear._id;
     } else {
-      console.log('⚠️  No academic year found, fetching all routine slots without year filtering');
     }
 
     // Build teacher filter criteria
@@ -4312,7 +4245,6 @@ exports.exportTeacherScheduleToPDF = async (req, res) => {
       });
     }
 
-    console.log(`📄 Generating teacher schedule PDF for: ${teacherId} (${semesterGroup} semester group)${startDate && endDate ? ` (${startDate} to ${endDate})` : ''}${authorityName ? ` Authority: ${authorityName}` : ''}`);
 
     // Get teacher information
     const teacher = await Teacher.findById(teacherId);
@@ -4343,7 +4275,6 @@ exports.exportTeacherScheduleToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Teacher schedule PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Teacher schedule PDF generation error:', error);
@@ -4363,7 +4294,6 @@ exports.exportAllTeachersSchedulesToPDF = async (req, res) => {
   try {
     const { academicYear, semesterGroup = 'all' } = req.query;
 
-    console.log('📄 Generating all teachers schedules PDF with semester group:', semesterGroup);
 
     // Use the working PDFRoutineService (same as class routine)
     const PDFRoutineService = require('../services/PDFRoutineService');
@@ -4380,7 +4310,6 @@ exports.exportAllTeachersSchedulesToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ All teachers schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ All teachers schedules PDF generation error:', error);
@@ -4408,7 +4337,6 @@ exports.exportRoomScheduleToPDF = async (req, res) => {
       });
     }
 
-    console.log(`📄 Generating room schedule PDF for: ${roomId}, semesterGroup: ${semesterGroup || 'all'}${startDate && endDate ? ` (${startDate} to ${endDate})` : ''}`);
 
     // Get room information
     const room = await Room.findById(roomId);
@@ -4434,7 +4362,6 @@ exports.exportRoomScheduleToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ Room schedule PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ Room schedule PDF generation error:', error);
@@ -4454,7 +4381,6 @@ exports.exportAllRoomSchedulesToPDF = async (req, res) => {
   try {
     const { academicYear, semesterGroup } = req.query;
 
-    console.log(`📄 Generating all room schedules PDF, semesterGroup: ${semesterGroup || 'all'}`);
 
     // Use the working PDFRoutineService (same as class routine)
     const PDFRoutineService = require('../services/PDFRoutineService');
@@ -4470,7 +4396,6 @@ exports.exportAllRoomSchedulesToPDF = async (req, res) => {
 
     res.send(pdfBuffer);
 
-    console.log(`✅ All room schedules PDF generated: ${fileName}`);
 
   } catch (error) {
     console.error('❌ All room schedules PDF generation error:', error);

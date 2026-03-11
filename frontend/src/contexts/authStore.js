@@ -59,29 +59,24 @@ const useAuthStore = create((set, get) => {
     login: async (email, password) => {
       set({ isLoading: true, error: null });
       try {
-        console.log('Attempting login with:', { email });
         const res = await api.post(`/auth/login`, { email, password });
         
-        if (!res.data.token) {
-          console.error('Login failed: No token received');
+        const token = res.data?.data?.token || res.data?.token;
+        if (!token) {
           set({ isLoading: false, error: 'Authentication failed: No token received' });
           return false;
         }
         
-        console.log('Login successful, token received');
-        setToLocalStorage('token', res.data.token);
+        setToLocalStorage('token', token);
         
         try {
-          // Get user details using the API service
           const userRes = await api.get(`/auth/me`);
-          console.log('User profile fetched successfully:', userRes.data);
           setToLocalStorage('user', JSON.stringify(userRes.data));
-          set({ token: res.data.token, user: userRes.data, isLoading: false });
+          set({ token, user: userRes.data, isLoading: false });
           return true;
         } catch (profileError) {
           console.error('Error fetching user profile:', profileError);
-          // Even if profile fetch fails, we've successfully logged in
-          set({ token: res.data.token, isLoading: false });
+          set({ token, isLoading: false });
           return true;
         }
       } catch (error) {

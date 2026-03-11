@@ -13,7 +13,7 @@ const { getLabGroupsForSection } = require('../utils/sectionUtils');
 // @access  Private
 exports.getRooms = async (req, res) => {
   try {
-    const rooms = await Room.find().sort({ name: 1 });
+    const rooms = await Room.find().sort({ name: 1 }).lean();
     res.json({
       success: true,
       count: rooms.length,
@@ -21,7 +21,7 @@ exports.getRooms = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -30,7 +30,15 @@ exports.getRooms = async (req, res) => {
 // @access  Private
 exports.getRoom = async (req, res) => {
   try {
-    const room = await Room.findById(req.params.id);
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Room ID format'
+      });
+    }
+
+    const room = await Room.findById(req.params.id).lean();
     
     if (!room) {
       return res.status(404).json({
@@ -51,7 +59,7 @@ exports.getRoom = async (req, res) => {
         message: 'Room not found'
       });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -97,7 +105,7 @@ exports.createRoom = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -115,6 +123,14 @@ exports.updateRoom = async (req, res) => {
 
   try {
     const { name, building, capacity, type, features } = req.body;
+
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Room ID format'
+      });
+    }
 
     // Check if room exists
     let room = await Room.findById(req.params.id);
@@ -158,7 +174,7 @@ exports.updateRoom = async (req, res) => {
         message: 'Room not found'
       });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -167,6 +183,14 @@ exports.updateRoom = async (req, res) => {
 // @access  Private/Admin
 exports.deleteRoom = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Room ID format'
+      });
+    }
+
     // Check if room exists
     const room = await Room.findById(req.params.id);
     if (!room) {
@@ -200,7 +224,7 @@ exports.deleteRoom = async (req, res) => {
         message: 'Room not found'
       });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 

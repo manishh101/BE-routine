@@ -15,19 +15,26 @@ const getSessionDashboard = async (req, res) => {
     // Get upcoming sessions (planning or draft)
     const upcomingSessions = await AcademicSession.find({
       status: { $in: ['PLANNING', 'DRAFT', 'APPROVED'] }
-    }).sort({ startDate: 1 }).limit(3);
+    }).sort({ startDate: 1 }).limit(3).lean();
 
     // Get recent completed sessions
     const recentSessions = await AcademicSession.find({
       status: { $in: ['COMPLETED', 'ARCHIVED'] }
-    }).sort({ endDate: -1 }).limit(5);
+    }).sort({ endDate: -1 }).limit(5).lean();
 
-    // Calculate statistics
+    // Calculate statistics in parallel
+    const [totalSessions, activeSessions, planningSessions, archivedSessions] = await Promise.all([
+      AcademicSession.countDocuments(),
+      AcademicSession.countDocuments({ status: 'ACTIVE' }),
+      AcademicSession.countDocuments({ status: 'PLANNING' }),
+      AcademicSession.countDocuments({ status: 'ARCHIVED' })
+    ]);
+
     let dashboardStats = {
-      totalSessions: await AcademicSession.countDocuments(),
-      activeSessions: await AcademicSession.countDocuments({ status: 'ACTIVE' }),
-      planningSessions: await AcademicSession.countDocuments({ status: 'PLANNING' }),
-      archivedSessions: await AcademicSession.countDocuments({ status: 'ARCHIVED' })
+      totalSessions,
+      activeSessions,
+      planningSessions,
+      archivedSessions
     };
 
     // Current session statistics

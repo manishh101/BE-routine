@@ -29,10 +29,10 @@ exports.createElectiveGroup = async (req, res) => {
     console.error(err.message);
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Elective group with this code already exists for this program/semester/year' 
+        message: 'Elective group with this code already exists for this program/semester/year' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -53,12 +53,13 @@ exports.getElectiveGroups = async (req, res) => {
       .populate('programId', 'code name')
       .populate('academicYearId', 'title nepaliYear')
       .populate('subjects.subjectId', 'code name credits weeklyHours')
-      .sort({ semester: 1, name: 1 });
+      .sort({ semester: 1, name: 1 })
+      .lean();
       
     res.json(electiveGroups);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -73,7 +74,7 @@ exports.getElectiveGroupById = async (req, res) => {
       .populate('subjects.subjectId', 'code name description credits weeklyHours prerequisites');
     
     if (!electiveGroup) {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
 
     // Get selection statistics
@@ -111,9 +112,9 @@ exports.getElectiveGroupById = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -130,7 +131,7 @@ exports.updateElectiveGroup = async (req, res) => {
     let electiveGroup = await ElectiveGroup.findById(req.params.id);
     
     if (!electiveGroup) {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
 
     // Validate subject references if updating subjects
@@ -144,7 +145,7 @@ exports.updateElectiveGroup = async (req, res) => {
           
           if (!subject) {
             return res.status(400).json({ 
-              msg: `Subject ${subjectEntry.subjectId} not found or inactive` 
+              message: `Subject ${subjectEntry.subjectId} not found or inactive` 
             });
           }
         }
@@ -165,14 +166,14 @@ exports.updateElectiveGroup = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
     if (err.code === 11000) {
       return res.status(400).json({ 
-        msg: 'Elective group with this code already exists' 
+        message: 'Elective group with this code already exists' 
       });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -184,7 +185,7 @@ exports.deleteElectiveGroup = async (req, res) => {
     const electiveGroup = await ElectiveGroup.findById(req.params.id);
     
     if (!electiveGroup) {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
 
     // Check if elective group is referenced in section choices
@@ -194,18 +195,18 @@ exports.deleteElectiveGroup = async (req, res) => {
 
     if (sectionChoices > 0) {
       return res.status(400).json({ 
-        msg: `Cannot delete elective group. It is referenced in ${sectionChoices} section choices.` 
+        message: `Cannot delete elective group. It is referenced in ${sectionChoices} section choices.` 
       });
     }
 
     await ElectiveGroup.findByIdAndDelete(req.params.id);
-    res.json({ msg: 'Elective group deleted successfully' });
+    res.json({ success: false, message: 'Elective group deleted successfully' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -217,19 +218,19 @@ exports.addSubjectToElectiveGroup = async (req, res) => {
     const { subjectId, maxSections } = req.body;
     
     if (!subjectId) {
-      return res.status(400).json({ msg: 'Subject ID is required' });
+      return res.status(400).json({ success: false, message: 'Subject ID is required' });
     }
 
     const electiveGroup = await ElectiveGroup.findById(req.params.id);
     
     if (!electiveGroup) {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
 
     // Check if subject exists and is active
     const subject = await Subject.findOne({ _id: subjectId, isActive: true });
     if (!subject) {
-      return res.status(404).json({ msg: 'Subject not found or inactive' });
+      return res.status(404).json({ success: false, message: 'Subject not found or inactive' });
     }
 
     // Check if subject is already in the group
@@ -238,7 +239,7 @@ exports.addSubjectToElectiveGroup = async (req, res) => {
     );
     
     if (existingSubject) {
-      return res.status(400).json({ msg: 'Subject already exists in this elective group' });
+      return res.status(400).json({ success: false, message: 'Subject already exists in this elective group' });
     }
 
     // Add subject to group
@@ -257,9 +258,9 @@ exports.addSubjectToElectiveGroup = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Invalid ID format' });
+      return res.status(404).json({ success: false, message: 'Invalid ID format' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -271,7 +272,7 @@ exports.removeSubjectFromElectiveGroup = async (req, res) => {
     const electiveGroup = await ElectiveGroup.findById(req.params.id);
     
     if (!electiveGroup) {
-      return res.status(404).json({ msg: 'Elective group not found' });
+      return res.status(404).json({ success: false, message: 'Elective group not found' });
     }
 
     // Check if subject is selected by any section
@@ -283,7 +284,7 @@ exports.removeSubjectFromElectiveGroup = async (req, res) => {
 
     if (isSelected) {
       return res.status(400).json({ 
-        msg: 'Cannot remove subject that has been selected by sections' 
+        message: 'Cannot remove subject that has been selected by sections' 
       });
     }
 
@@ -294,9 +295,9 @@ exports.removeSubjectFromElectiveGroup = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Invalid ID format' });
+      return res.status(404).json({ success: false, message: 'Invalid ID format' });
     }
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
@@ -311,7 +312,7 @@ exports.getElectivesByProgram = async (req, res) => {
     // Find program by code
     const program = await Program.findOne({ code: programCode });
     if (!program) {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
     
     const filter = { programId: program._id };
@@ -329,6 +330,6 @@ exports.getElectivesByProgram = async (req, res) => {
     res.json(electiveGroups);
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ msg: 'Server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

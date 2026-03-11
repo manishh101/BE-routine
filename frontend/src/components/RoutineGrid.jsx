@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { 
   Card, 
@@ -198,7 +198,7 @@ const RoutineGrid = ({
   // Force refresh when selection changes
   useEffect(() => {
     if (programCode && semester && section && !demoMode && !teacherViewMode && !isRoomViewMode) {
-      queryClient.invalidateQueries(['routine', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
     }
   }, [programCode, semester, section, queryClient, demoMode, teacherViewMode, isRoomViewMode]);
 
@@ -230,10 +230,10 @@ const RoutineGrid = ({
     },
     enabled: !providedRoutineData && !teacherViewMode && !isRoomViewMode && (demoMode || !!(programCode && semester && section)),
     retry: 1,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     refetchOnMount: true,
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0 // Don't cache data
+    staleTime: 30 * 1000, // 30 seconds — data is invalidated on mutations anyway
+    gcTime: 2 * 60 * 1000 // 2 minutes
   });
   
   // Use either the provided routine data or fetch new data
@@ -545,16 +545,16 @@ const RoutineGrid = ({
   };
 
   // Helper functions
-  const getClassTypeColor = (classType) => {
+  const getClassTypeColor = useCallback((classType) => {
     switch (classType) {
       case 'L': return 'blue';
       case 'P': return 'green';
       case 'T': return 'orange';
       default: return 'default';
     }
-  };
+  }, []);
 
-  const getClassTypeText = (classType) => {
+  const getClassTypeText = useCallback((classType) => {
     // For elective classes, always show 'Practical'
     // This function is called with only classType, so we need to handle elective in the display logic below
     switch (classType) {
@@ -563,7 +563,7 @@ const RoutineGrid = ({
       case 'T': return 'Tutorial';
       default: return classType;
     }
-  };
+  }, []);
 
   // Helper function to format subject display for elective classes
   const getSubjectDisplayText = (classData) => {
@@ -631,12 +631,14 @@ const RoutineGrid = ({
       await handleRoutineChangeCache(queryClient, result);
       
       // Invalidate routine queries
-      queryClient.invalidateQueries(['routine', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
       
-      // Invalidate teacher schedules if any were affected
-      if (result?.data?.affectedTeachers?.length > 0) {
-        queryClient.invalidateQueries(['teacherSchedules']);
-      }
+      // Invalidate all teacher and room schedules (entire routine cleared affects everything)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] }),
+        queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['roomSchedule'] })
+      ]);
     },
     onError: (error) => {
       console.error('Clear entire routine error:', error);
@@ -682,17 +684,17 @@ const RoutineGrid = ({
       // Force immediate refetch of routine data
       await refetchRoutine();
       
-      // Invalidate routine queries for comprehensive updates
-      queryClient.invalidateQueries(['routine', programCode, semester, section]);
+      // Invalidate routine queries for comprehensive updates using React Query v5 API
+      queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
       
       // CRITICAL FIX: Invalidate teacher and room schedule caches
       await Promise.all([
-        queryClient.invalidateQueries(['teacher-schedule-from-routine']),
-        queryClient.invalidateQueries(['teacherSchedule']),
-        queryClient.invalidateQueries(['roomSchedule']),
-        queryClient.invalidateQueries(['teachers']),
-        queryClient.invalidateQueries(['rooms']),
-        queryClient.invalidateQueries(['timeSlots'])
+        queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] }),
+        queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['roomSchedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['teachers'] }),
+        queryClient.invalidateQueries({ queryKey: ['rooms'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeSlots'] })
       ]);
     },
     onError: (error, variables) => {
@@ -731,7 +733,7 @@ const RoutineGrid = ({
       });
       
       // Refresh time slots
-      queryClient.invalidateQueries(['timeSlots', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots', programCode, semester, section] });
       
       // Close modal and reset form
       setAddTimeSlotModalVisible(false);
@@ -770,7 +772,7 @@ const RoutineGrid = ({
       });
       
       // Refresh time slots
-      queryClient.invalidateQueries(['timeSlots', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots', programCode, semester, section] });
     },
     onError: (error, { timeSlotId }) => {
       console.error('Delete time slot error:', error);
@@ -870,8 +872,8 @@ const RoutineGrid = ({
       await refetchRoutine();
       
       // Invalidate routine queries for comprehensive updates
-      queryClient.invalidateQueries(['routine', programCode, semester, section]);
-      queryClient.refetchQueries(['routine', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
+      queryClient.refetchQueries({ queryKey: ['routine', programCode, semester, section] });
     },
     onError: (error, spanId) => {
       console.error('Clear span group error:', error);
@@ -907,9 +909,63 @@ const RoutineGrid = ({
     setSelectedSlot({ dayIndex, slotIndex: normalizedSlotId });
     
     // Get existing class data using the utility function
-    const existingClassData = getClassData(routineGridData, dayIndex, normalizedSlotId);
+    let existingClassData = getClassData(routineGridData, dayIndex, normalizedSlotId);
     console.log('🔍 Existing class data for edit:', existingClassData);
     console.log('🔍 Day:', dayIndex, 'Slot:', normalizedSlotId);
+    
+    // Handle multi-group lab classes (backend returns array when Group A and B share same slot)
+    if (Array.isArray(existingClassData) && existingClassData.length > 0) {
+      console.log('🔍 Multi-group slot detected, merging into bothGroups format');
+      const firstGroup = existingClassData[0];
+      const secondGroup = existingClassData.length > 1 ? existingClassData[1] : null;
+      
+      // Derive section-aware group mapping
+      const currentSection = section?.toUpperCase();
+      const sectionGroups = currentSection === 'CD' ? ['C', 'D'] : ['A', 'B'];
+      
+      // Figure out which is group A and group B based on labGroup value
+      let groupA = firstGroup;
+      let groupB = secondGroup;
+      if (secondGroup && sectionGroups.indexOf(secondGroup.labGroup) < sectionGroups.indexOf(firstGroup.labGroup)) {
+        groupA = secondGroup;
+        groupB = firstGroup;
+      }
+      
+      existingClassData = {
+        ...groupA,
+        labGroupType: 'bothGroups',
+        labGroup: 'ALL',
+        isMultiGroup: true,
+        groups: existingClassData,
+        // Group A data
+        groupASubject: groupA.subjectId,
+        groupATeachers: groupA.teacherIds,
+        groupARoom: groupA.roomId,
+        // Group B data
+        groupBSubject: groupB ? groupB.subjectId : groupA.subjectId,
+        groupBTeachers: groupB ? groupB.teacherIds : groupA.teacherIds,
+        groupBRoom: groupB ? groupB.roomId : groupA.roomId,
+      };
+    } else if (existingClassData && existingClassData.classType === 'P') {
+      // Single-group lab class: derive labGroupType from labGroup
+      const labGroup = existingClassData.labGroup;
+      const currentSection = section?.toUpperCase();
+      const sectionGroups = currentSection === 'CD' ? ['C', 'D'] : ['A', 'B'];
+      
+      let labGroupType = null;
+      if (labGroup === sectionGroups[0]) {
+        labGroupType = 'groupA';
+      } else if (labGroup === sectionGroups[1]) {
+        labGroupType = 'groupB';
+      } else if (labGroup === 'ALL') {
+        labGroupType = 'bothGroups';
+      }
+      
+      if (labGroupType) {
+        existingClassData = { ...existingClassData, labGroupType };
+      }
+    }
+    
     setExistingClass(existingClassData || null);
     setAssignModalVisible(true);
   };
@@ -1153,7 +1209,7 @@ const RoutineGrid = ({
         });
         
         safeMessage.success('Class restored successfully!');
-        queryClient.invalidateQueries(['routine', programCode, semester, section]);
+        queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
       }
       
       setLastDeletedClass(null);
@@ -1517,7 +1573,7 @@ const RoutineGrid = ({
         
         // Refresh data to show the new elective
         await refetchRoutine();
-        queryClient.invalidateQueries(['routine', programCode, semester, section]);
+        queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
         
         onModalClose();
         return;
@@ -1540,7 +1596,7 @@ const RoutineGrid = ({
         console.log('🔄 Changing from multi-period to single-period - will delete old multi slots');
         try {
           // Delete the entire span group first
-          await routinesAPI.clearSpanGroup(programCode, semester, section, existingClass.spanId);
+          await routinesAPI.clearSpanGroup(existingClass.spanId);
           console.log('✅ Deleted old multi-period slots');
         } catch (deleteError) {
           console.error('⚠️  Error deleting old multi slots:', deleteError);
@@ -1617,20 +1673,20 @@ const RoutineGrid = ({
       console.log('🔄 Forcing complete data refresh...');
       
       // Strategy 1: Remove cached data entirely to force fresh fetch
-      queryClient.removeQueries(['routine', programCode, semester, section]);
+      queryClient.removeQueries({ queryKey: ['routine', programCode, semester, section] });
       
       // Strategy 2: Explicitly refetch
       const refetchResult = await refetchRoutine();
       console.log('🔄 Refetch result:', refetchResult ? 'Success' : 'Failed');
       
       // Strategy 3: Invalidate queries to ensure any other components refresh
-      queryClient.invalidateQueries(['routine', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
       
       // Strategy 4: Wait a moment and refetch again to ensure backend has fully processed
       setTimeout(async () => {
         console.log('🔄 Second refresh to ensure data consistency...');
         await refetchRoutine();
-        queryClient.invalidateQueries(['routine', programCode, semester, section]);
+        queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
       }, 300);
       
       console.log('✅ Data refresh complete - modal will close');
@@ -1651,27 +1707,56 @@ const RoutineGrid = ({
         });
       }
       
-      // Enhanced error message with more context
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error ||
-                          error.message || 
-                          'Failed to save class';
-      
-      safeMessage.error({
-        content: (
-          <div>
-            <div>❌ {existingClass ? 'Failed to update class' : 'Failed to assign class'}</div>
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-              {errorMessage}
+      // Handle 409 conflict with force-save option
+      if (error.response?.status === 409 && !classData.forceAssign) {
+        const conflict = error.response.data?.conflict;
+        const conflictsArr = error.response.data?.conflicts || [];
+        
+        let conflictMessage = error.response.data?.message || 'Scheduling conflict detected.';
+        
+        modal.confirm({
+          title: 'Scheduling Conflict Detected',
+          width: 600,
+          content: (
+            <div>
+              <p>{conflictMessage}</p>
+              <p>Do you want to save this class anyway despite the conflict?</p>
+              {conflictsArr.length > 0 && (
+                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#fff2f0', borderRadius: '6px', fontSize: '13px' }}>
+                  <strong>Conflicts:</strong>
+                  {conflictsArr.map((c, i) => (
+                    <div key={i} style={{ marginTop: '4px' }}>• {c.message || c.type || 'Unknown conflict'}</div>
+                  ))}
+                </div>
+              )}
+              {conflict && !conflictsArr.length && (
+                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#fff2f0', borderRadius: '6px', fontSize: '13px' }}>
+                  <strong>Conflict:</strong> {conflict.type} - {conflict.teacherName || conflict.roomName || 'Details unavailable'}
+                  {conflict.conflictDetails && (
+                    <div style={{ marginTop: '4px' }}>
+                      → {conflict.conflictDetails.programCode} Sem {conflict.conflictDetails.semester} Sec {conflict.conflictDetails.section}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        ),
-        duration: 6
-      });
-      
-      // Additional specific error handling
-      if (error.response?.status === 409) {
-        safeMessage.error('Schedule conflict detected. Please check teacher and room availability.');
+          ),
+          okText: 'Save with Conflicts',
+          cancelText: 'Cancel',
+          okType: 'danger',
+          onOk: async () => {
+            try {
+              // Retry with forceAssign flag
+              await handleSaveClass({ ...classData, forceAssign: true });
+            } catch (retryError) {
+              console.error('❌ Force save failed:', retryError);
+              safeMessage.error('Failed to save class even with force assign.');
+            }
+          }
+        });
+      } else if (error.response?.status === 409) {
+        // forceAssign was already true but still got 409
+        safeMessage.error('Failed to save class. Conflict could not be overridden.');
       } else if (error.response?.status === 400) {
         // Get the first error message from the errors array
         const errors = error.response?.data?.errors || [];
@@ -1679,6 +1764,24 @@ const RoutineGrid = ({
         const errorMsg = firstError?.msg || firstError?.message || error.response?.data?.message || 'Validation failed';
         console.error('❌ 400 Error message:', errorMsg);
         safeMessage.error(`Validation error: ${errorMsg}`);
+      } else {
+        // General error
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error ||
+                            error.message || 
+                            'Failed to save class';
+        
+        safeMessage.error({
+          content: (
+            <div>
+              <div>❌ {existingClass ? 'Failed to update class' : 'Failed to assign class'}</div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                {errorMessage}
+              </div>
+            </div>
+          ),
+          duration: 6
+        });
       }
     }
   };
@@ -1785,29 +1888,60 @@ const RoutineGrid = ({
       await refetchRoutine();
       
       // Invalidate cache
-      queryClient.invalidateQueries(['routine', programCode, semester, section]);
+      queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
       
       onModalClose();
       
     } catch (error) {
       console.error('❌ Multi-period save error:', error);
       
-      if (error.response?.status === 409) {
-        // Handle conflicts
+      if (error.response?.status === 409 && !classData.forceAssign) {
+        // Handle conflicts - offer user to force save
         const conflict = error.response.data?.conflict;
+        const conflicts = error.response.data?.conflicts || (conflict ? [conflict] : []);
+        
+        let conflictMessage = 'Scheduling conflict detected.';
         if (conflict) {
-          let message = `Conflict detected in period ${conflict.slotIndex + 1}`;
           if (conflict.type === 'teacher') {
-            message += `: Teacher ${conflict.teacherName} is already assigned`;
+            conflictMessage = `Teacher ${conflict.teacherName} is already assigned at this time`;
           } else if (conflict.type === 'room') {
-            message += `: Room ${conflict.roomName} is already occupied`;
-          } else {
-            message += `: ${conflict.type} conflict`;
+            conflictMessage = `Room ${conflict.roomName} is already occupied at this time`;
+          } else if (conflict.type === 'slot') {
+            conflictMessage = 'This slot is already occupied';
           }
-          safeMessage.error(message);
-        } else {
-          safeMessage.error('Schedule conflict detected. Please check teacher and room availability.');
         }
+        
+        modal.confirm({
+          title: 'Multi-Period Scheduling Conflict',
+          width: 600,
+          content: (
+            <div>
+              <p>{conflictMessage}</p>
+              <p>Do you want to save this class anyway despite the conflict?</p>
+              {conflict?.conflictDetails && (
+                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#fff2f0', borderRadius: '6px', fontSize: '13px' }}>
+                  <strong>Conflict with:</strong> {conflict.conflictDetails.programCode} - Sem {conflict.conflictDetails.semester} - Sec {conflict.conflictDetails.section}
+                  {conflict.conflictDetails.subjectName && <div>Subject: {conflict.conflictDetails.subjectName}</div>}
+                </div>
+              )}
+            </div>
+          ),
+          okText: 'Save with Conflicts',
+          cancelText: 'Cancel',
+          okType: 'danger',
+          onOk: async () => {
+            try {
+              // Retry with forceAssign flag
+              await handleSaveSpannedClass({ ...classData, forceAssign: true }, slotIndexes);
+            } catch (retryError) {
+              console.error('❌ Force save multi-period failed:', retryError);
+              safeMessage.error('Failed to save multi-period class even with force assign.');
+            }
+          }
+        });
+      } else if (error.response?.status === 409) {
+        // forceAssign was already true but still got 409 - show plain error
+        safeMessage.error('Failed to save multi-period class. Conflict could not be overridden.');
       } else {
         safeMessage.error(error.message || 'Failed to assign multi-period class. Please try again.');
       }
@@ -1913,7 +2047,7 @@ const RoutineGrid = ({
                 size="small"
                 onImportSuccess={() => {
                   safeMessage.success('Routine imported successfully!');
-                  queryClient.invalidateQueries(['routine', programCode, semester, section]);
+                  queryClient.invalidateQueries({ queryKey: ['routine', programCode, semester, section] });
                 }}
                 onImportError={(error) => {
                   safeMessage.error(error?.message || 'Failed to import routine');
@@ -2374,7 +2508,7 @@ const RoutineGrid = ({
           slotIndex={selectedSlot.slotIndex}
           timeSlots={timeSlots}
           existingClass={existingClass}
-          loading={clearClassMutation.isLoading}
+          loading={clearClassMutation.isPending}
         />
       )}
       
@@ -2404,7 +2538,7 @@ const RoutineGrid = ({
             setAddTimeSlotModalVisible(false);
             timeSlotForm.resetFields();
           }}
-          confirmLoading={addContextTimeSlotMutation.isLoading}
+          confirmLoading={addContextTimeSlotMutation.isPending}
           width={600}
         >
           <Alert

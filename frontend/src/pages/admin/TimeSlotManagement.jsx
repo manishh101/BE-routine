@@ -52,7 +52,7 @@ const TimeSlotManagement = () => {
     mutationFn: (timeSlotData) => timeSlotsAPI.createTimeSlot(timeSlotData),
     onSuccess: () => {
       message.success('Time slot created successfully');
-      queryClient.invalidateQueries(['timeSlots']);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
       setModalVisible(false);
       form.resetFields();
     },
@@ -66,7 +66,7 @@ const TimeSlotManagement = () => {
     mutationFn: ({ id, data }) => timeSlotsAPI.updateTimeSlot(id, data),
     onSuccess: () => {
       message.success('Time slot updated successfully');
-      queryClient.invalidateQueries(['timeSlots']);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
       setModalVisible(false);
       setEditingTimeSlot(null);
       form.resetFields();
@@ -82,7 +82,7 @@ const TimeSlotManagement = () => {
     onSuccess: (result) => {
       const message_text = result.data?.msg || 'Time slot deleted successfully';
       message.success(message_text);
-      queryClient.invalidateQueries(['timeSlots']);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
     },
     onError: (error, { id }) => {
       const errorData = error.response?.data;
@@ -127,7 +127,7 @@ const TimeSlotManagement = () => {
     mutationFn: () => timeSlotsAPI.initializeTimeSlots(),
     onSuccess: () => {
       message.success('Default time slots initialized successfully');
-      queryClient.invalidateQueries(['timeSlots']);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
     },
     onError: (error) => {
       message.error(error.response?.data?.message || 'Failed to initialize time slots');
@@ -139,7 +139,7 @@ const TimeSlotManagement = () => {
     mutationFn: () => timeSlotsAPI.reorderTimeSlots(),
     onSuccess: () => {
       message.success('Time slots reordered chronologically');
-      queryClient.invalidateQueries(['timeSlots']);
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
     },
     onError: (error) => {
       message.error(error.response?.data?.message || 'Failed to reorder time slots');
@@ -346,14 +346,14 @@ const TimeSlotManagement = () => {
               <Button
                 icon={<SettingOutlined />}
                 onClick={handleInitialize}
-                loading={initializeMutation.isLoading}
+                loading={initializeMutation.isPending}
               >
                 Initialize Default
               </Button>
               <Button
                 icon={<ClockCircleOutlined />}
                 onClick={() => reorderMutation.mutate()}
-                loading={reorderMutation.isLoading}
+                loading={reorderMutation.isPending}
                 title="Reorder all time slots chronologically by start time"
               >
                 Reorder
@@ -401,7 +401,7 @@ const TimeSlotManagement = () => {
         open={modalVisible}
         onOk={handleSave}
         onCancel={handleCancel}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={500}
       >
         <Form

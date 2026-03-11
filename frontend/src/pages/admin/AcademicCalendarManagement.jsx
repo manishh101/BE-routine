@@ -99,7 +99,7 @@ const AcademicCalendarManagement = () => {
     },
     onSuccess: (data) => {
       message.success('Academic calendar created successfully');
-      queryClient.invalidateQueries(['academic-calendars']);
+      queryClient.invalidateQueries({ queryKey: ['academic-calendars'] });
       setIsModalVisible(false);
       setEditingCalendar(null);
       form.resetFields();
@@ -129,7 +129,7 @@ const AcademicCalendarManagement = () => {
     },
     onSuccess: (data) => {
       message.success('Academic calendar updated successfully');
-      queryClient.invalidateQueries(['academic-calendars']);
+      queryClient.invalidateQueries({ queryKey: ['academic-calendars'] });
       setIsModalVisible(false);
       setEditingCalendar(null);
       form.resetFields();
@@ -159,7 +159,7 @@ const AcademicCalendarManagement = () => {
     },
     onSuccess: (data) => {
       message.success('Academic calendar deleted successfully');
-      queryClient.invalidateQueries(['academic-calendars']);
+      queryClient.invalidateQueries({ queryKey: ['academic-calendars'] });
     },
     onError: (error) => {
       console.error('Delete calendar error:', error);
@@ -175,7 +175,7 @@ const AcademicCalendarManagement = () => {
       } else if (error?.response?.status === 404) {
         message.error('Academic year not found');
         // Refresh the list to reflect current state
-        queryClient.invalidateQueries(['academic-calendars']);
+        queryClient.invalidateQueries({ queryKey: ['academic-calendars'] });
       }
     }
   });
@@ -541,7 +541,7 @@ const AcademicCalendarManagement = () => {
           setEditingCalendar(null);
           form.resetFields();
         }}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={700}
       >
         <Form

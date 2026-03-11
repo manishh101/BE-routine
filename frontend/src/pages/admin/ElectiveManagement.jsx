@@ -80,7 +80,7 @@ const ElectiveManagement = () => {
     mutationFn: (electiveData) => electiveGroupsAPI.createElectiveGroup(electiveData),
     onSuccess: () => {
       message.success('Elective group created successfully');
-      queryClient.invalidateQueries(['elective-groups']);
+      queryClient.invalidateQueries({ queryKey: ['elective-groups'] });
       setIsModalVisible(false);
       form.resetFields();
     },
@@ -94,7 +94,7 @@ const ElectiveManagement = () => {
     mutationFn: ({ id, data }) => electiveGroupsAPI.updateElectiveGroup(id, data),
     onSuccess: () => {
       message.success('Elective group updated successfully');
-      queryClient.invalidateQueries(['elective-groups']);
+      queryClient.invalidateQueries({ queryKey: ['elective-groups'] });
       setIsModalVisible(false);
       setEditingElective(null);
       form.resetFields();
@@ -109,7 +109,7 @@ const ElectiveManagement = () => {
     mutationFn: (id) => electiveGroupsAPI.deleteElectiveGroup(id),
     onSuccess: () => {
       message.success('Elective group deleted successfully');
-      queryClient.invalidateQueries(['elective-groups']);
+      queryClient.invalidateQueries({ queryKey: ['elective-groups'] });
     },
     onError: (error) => {
       message.error(`Failed to delete elective group: ${error.response?.data?.message || error.message}`);
@@ -455,7 +455,7 @@ const ElectiveManagement = () => {
           setEditingElective(null);
           form.resetFields();
         }}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={600}
       >
         <Form

@@ -7,19 +7,19 @@ const { validationResult } = require('express-validator');
 exports.createProgram = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
   }
 
   try {
     const program = new Program(req.body);
     await program.save();
-    res.status(201).json(program);
+    res.status(201).json({ success: true, data: program });
   } catch (err) {
     console.error(err.message);
     if (err.code === 11000) {
-      return res.status(400).json({ msg: 'Program with this name or code already exists' });
+      return res.status(400).json({ success: false, message: 'Program with this name or code already exists' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -28,11 +28,11 @@ exports.createProgram = async (req, res) => {
 // @access  Private
 exports.getPrograms = async (req, res) => {
   try {
-    const programs = await Program.find();
+    const programs = await Program.find().lean();
     res.json(programs);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -41,19 +41,19 @@ exports.getPrograms = async (req, res) => {
 // @access  Private
 exports.getProgramById = async (req, res) => {
   try {
-    const program = await Program.findById(req.params.id);
+    const program = await Program.findById(req.params.id).lean();
     
     if (!program) {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
 
-    res.json(program);
+    res.json({ success: true, data: program });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -63,14 +63,14 @@ exports.getProgramById = async (req, res) => {
 exports.updateProgram = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({ success: false, message: 'Validation failed', errors: errors.array() });
   }
 
   try {
     let program = await Program.findById(req.params.id);
     
     if (!program) {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
 
     program = await Program.findByIdAndUpdate(
@@ -79,13 +79,13 @@ exports.updateProgram = async (req, res) => {
       { new: true }
     );
 
-    res.json(program);
+    res.json({ success: true, data: program });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -97,17 +97,17 @@ exports.deleteProgram = async (req, res) => {
     const program = await Program.findById(req.params.id);
     
     if (!program) {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
 
     await program.remove();
 
-    res.json({ msg: 'Program removed' });
+    res.json({ success: true, message: 'Program removed' });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Program not found' });
+      return res.status(404).json({ success: false, message: 'Program not found' });
     }
-    res.status(500).send('Server error');
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { teachersAPI } from '../services/api';
+import { broadcastRoutineChange } from './robustCacheInvalidation';
 
 /**
  * React Query Cache Management for Teacher Schedule Synchronization
@@ -21,22 +22,31 @@ export const invalidateTeacherSchedules = async (queryClient, affectedTeacherIds
     affectedTeacherIds.forEach(teacherId => {
       if (teacherId) {
         invalidationPromises.push(
-          queryClient.invalidateQueries(['teacherSchedule', teacherId])
+          queryClient.invalidateQueries({ queryKey: ['teacherSchedule', teacherId] })
+        );
+        invalidationPromises.push(
+          queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine', teacherId] })
         );
       }
     });
   }
 
-  // Invalidate all teacher schedules if no specific teachers provided
-  if (affectedTeacherIds.length === 0) {
-    invalidationPromises.push(
-      queryClient.invalidateQueries(['teacherSchedule'])
-    );
-  }
+  // Invalidate all teacher schedules (both query key patterns)
+  invalidationPromises.push(
+    queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] })
+  );
+  invalidationPromises.push(
+    queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] })
+  );
+  
+  // Also invalidate room schedules since routine changes affect rooms too
+  invalidationPromises.push(
+    queryClient.invalidateQueries({ queryKey: ['roomSchedule'] })
+  );
 
   // Also invalidate teachers list in case of changes
   invalidationPromises.push(
-    queryClient.invalidateQueries(['teachers'])
+    queryClient.invalidateQueries({ queryKey: ['teachers'] })
   );
 
   try {
@@ -62,9 +72,20 @@ export const handleRoutineChangeCache = async (queryClient, mutationResult) => {
     await invalidateTeacherSchedules(queryClient, affectedTeacherIds);
     
     // Invalidate routine data as well
-    await queryClient.invalidateQueries(['routine']);
+    await queryClient.invalidateQueries({ queryKey: ['routine'] });
     
-    console.log('[Cache] Cache invalidated after routine change');
+    // Invalidate room schedules 
+    await queryClient.invalidateQueries({ queryKey: ['roomSchedule'] });
+    
+    // Broadcast change event to all listening components (Teacher Schedule, Room Schedule, etc.)
+    broadcastRoutineChange({
+      type: 'routine-change',
+      teacherIds: affectedTeacherIds,
+      roomId: mutationResult?.data?.roomId || null,
+      timestamp: Date.now()
+    });
+    
+    console.log('[Cache] Cache invalidated and change broadcasted after routine change');
   } catch (error) {
     console.error('[Cache] Error handling routine change cache:', error);
   }
@@ -120,9 +141,10 @@ export const useTeacherScheduleCache = (queryClient) => {
     refreshAllTeacherData: async () => {
       try {
         await Promise.all([
-          queryClient.invalidateQueries(['teachers']),
-          queryClient.invalidateQueries(['teacherSchedule']),
-          queryClient.invalidateQueries(['timeSlots'])
+          queryClient.invalidateQueries({ queryKey: ['teachers'] }),
+          queryClient.invalidateQueries({ queryKey: ['teacherSchedule'] }),
+          queryClient.invalidateQueries({ queryKey: ['teacher-schedule-from-routine'] }),
+          queryClient.invalidateQueries({ queryKey: ['timeSlots'] })
         ]);
         console.log('[Cache] All teacher data refreshed');
       } catch (error) {

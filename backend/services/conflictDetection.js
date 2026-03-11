@@ -20,6 +20,9 @@ class ConflictDetectionService {
     const conflicts = [];
     const { dayIndex, slotIndex, teacherIds, roomId, recurrence, academicYearId, classCategory, semester } = slotData;
 
+    // Ensure teacherIds is always an array
+    const normalizedTeacherIds = Array.isArray(teacherIds) ? teacherIds : (teacherIds ? [teacherIds] : []);
+
     // Special handling for elective classes
     if (classCategory === 'ELECTIVE' && slotData.targetSections && slotData.targetSections.length > 1) {
       const electiveConflicts = await this.validateElectiveScheduling(slotData);
@@ -27,7 +30,7 @@ class ConflictDetectionService {
     }
 
     // Teacher conflicts - pass semester for semester group checking
-    for (const teacherId of teacherIds) {
+    for (const teacherId of normalizedTeacherIds) {
       const teacherConflicts = await this.checkTeacherConflicts(
         teacherId, dayIndex, slotIndex, recurrence, academicYearId, semester
       );
@@ -35,10 +38,12 @@ class ConflictDetectionService {
     }
 
     // Room conflicts - pass semester for semester group checking
-    const roomConflicts = await this.checkRoomConflicts(
-      roomId, dayIndex, slotIndex, recurrence, academicYearId, semester
-    );
-    conflicts.push(...roomConflicts);
+    if (roomId) {
+      const roomConflicts = await this.checkRoomConflicts(
+        roomId, dayIndex, slotIndex, recurrence, academicYearId, semester
+      );
+      conflicts.push(...roomConflicts);
+    }
 
     // Section conflicts (students can't be in two places at once)
     const sectionConflicts = await this.checkSectionConflicts(slotData);
@@ -173,7 +178,7 @@ class ConflictDetectionService {
   }
 
   static async checkSectionConflicts(slotData) {
-    const { programId, semester, section, dayIndex, slotIndex, recurrence, academicYearId } = slotData;
+    const { programId, semester, section, dayIndex, slotIndex, recurrence, academicYearId, classType, labGroup } = slotData;
     const conflicts = [];
 
     // For electives (7th/8th semester), check differently
@@ -194,6 +199,19 @@ class ConflictDetectionService {
     for (const existingSlot of existingSlots) {
       const hasConflict = this.checkRecurrenceConflict(recurrence, existingSlot.recurrence);
       if (hasConflict) {
+        // For practical/lab classes with different lab groups, they can share the same time slot
+        // e.g., Group A and Group B can have different practicals at the same time
+        if (classType === 'P' && existingSlot.classType === 'P') {
+          const newLabGroup = labGroup || slotData.labGroupName || null;
+          const existingLabGroup = existingSlot.labGroup || existingSlot.labGroupName || null;
+          
+          // Different lab groups at the same time are NOT a conflict
+          if (newLabGroup && existingLabGroup && newLabGroup !== existingLabGroup && 
+              newLabGroup !== 'ALL' && existingLabGroup !== 'ALL') {
+            continue; // Skip - different lab groups can coexist
+          }
+        }
+        
         conflicts.push({
           type: 'section_conflict',
           existingSlotId: existingSlot._id,
@@ -353,9 +371,27 @@ class ConflictDetectionService {
     }
 
     // Custom patterns need week-by-week checking
-    if (pattern1.type === 'custom' || pattern2.type === 'custom') {
-      // This would need more complex logic for custom patterns
-      return false; // For now, assume no conflict
+    if (pattern1.type === 'custom' && pattern2.type === 'custom') {
+      // Check if any weeks overlap
+      const weeks1 = pattern1.customWeeks || [];
+      const weeks2 = pattern2.customWeeks || [];
+      return weeks1.some(w => weeks2.includes(w));
+    }
+
+    // Mixed: one is custom, one is alternate
+    if (pattern1.type === 'custom' && pattern2.type === 'alternate') {
+      const customWeeks = pattern1.customWeeks || [];
+      return customWeeks.some(w => {
+        const isOddWeek = w % 2 === 1;
+        return (pattern2.pattern === 'odd' && isOddWeek) || (pattern2.pattern === 'even' && !isOddWeek);
+      });
+    }
+    if (pattern2.type === 'custom' && pattern1.type === 'alternate') {
+      const customWeeks = pattern2.customWeeks || [];
+      return customWeeks.some(w => {
+        const isOddWeek = w % 2 === 1;
+        return (pattern1.pattern === 'odd' && isOddWeek) || (pattern1.pattern === 'even' && !isOddWeek);
+      });
     }
 
     return false;
@@ -700,16 +736,20 @@ ConflictDetectionService.analyzeAllConflicts = async (slots) => {
   for (const dayTimeKey in slotsByDayAndTime) {
     const slotsAtTime = slotsByDayAndTime[dayTimeKey];
     if (slotsAtTime.length > 1) {
-      // Check teacher conflicts
+      // Check teacher conflicts - only within the same semester group
       const teacherMap = new Map();
       
       for (const slot of slotsAtTime) {
         for (const teacherId of slot.teacherIds) {
-          const teacherIdStr = teacherId.toString();
-          if (teacherMap.has(teacherIdStr)) {
-            // Teacher conflict found
-            const conflictingSlot = teacherMap.get(teacherIdStr);
-            const teacher = slot.teacherIds.find(t => t._id.toString() === teacherIdStr);
+          const teacherIdStr = teacherId.toString ? teacherId.toString() : (teacherId._id ? teacherId._id.toString() : String(teacherId));
+          // Include semester group in the key so different semester groups don't conflict
+          const semGroup = getSemesterGroupName(parseInt(slot.semester));
+          const teacherGroupKey = `${teacherIdStr}-${semGroup}`;
+          
+          if (teacherMap.has(teacherGroupKey)) {
+            // Teacher conflict found within the same semester group
+            const conflictingSlot = teacherMap.get(teacherGroupKey);
+            const teacher = slot.teacherIds.find(t => (t._id ? t._id.toString() : t.toString()) === teacherIdStr);
             
             conflicts.push({
               type: 'teacher_double_booked',
@@ -717,6 +757,7 @@ ConflictDetectionService.analyzeAllConflicts = async (slots) => {
               teacherName: teacher?.fullName || 'Unknown Teacher',
               dayIndex: slot.dayIndex,
               slotIndex: slot.slotIndex,
+              semesterGroup: semGroup,
               conflictingSlots: [
                 {
                   id: conflictingSlot._id,
@@ -735,20 +776,23 @@ ConflictDetectionService.analyzeAllConflicts = async (slots) => {
               ]
             });
           } else {
-            teacherMap.set(teacherIdStr, slot);
+            teacherMap.set(teacherGroupKey, slot);
           }
         }
       }
       
-      // Check room conflicts
+      // Check room conflicts - only within the same semester group
       const roomMap = new Map();
       
       for (const slot of slotsAtTime) {
         if (slot.roomId) {
-          const roomIdStr = slot.roomId._id.toString();
-          if (roomMap.has(roomIdStr)) {
-            // Room conflict found
-            const conflictingSlot = roomMap.get(roomIdStr);
+          const roomIdStr = slot.roomId._id ? slot.roomId._id.toString() : slot.roomId.toString();
+          const semGroup = getSemesterGroupName(parseInt(slot.semester));
+          const roomGroupKey = `${roomIdStr}-${semGroup}`;
+          
+          if (roomMap.has(roomGroupKey)) {
+            // Room conflict found within the same semester group
+            const conflictingSlot = roomMap.get(roomGroupKey);
             
             conflicts.push({
               type: 'room_double_booked',
@@ -756,6 +800,7 @@ ConflictDetectionService.analyzeAllConflicts = async (slots) => {
               roomName: slot.roomId?.name || 'Unknown Room',
               dayIndex: slot.dayIndex,
               slotIndex: slot.slotIndex,
+              semesterGroup: semGroup,
               conflictingSlots: [
                 {
                   id: conflictingSlot._id,
@@ -774,17 +819,22 @@ ConflictDetectionService.analyzeAllConflicts = async (slots) => {
               ]
             });
           } else {
-            roomMap.set(roomIdStr, slot);
+            roomMap.set(roomGroupKey, slot);
           }
         }
       }
       
       // Check section conflicts (same program, semester and section at the same time)
+      // Lab groups with different groups at the same time are NOT a conflict
       const sectionMap = new Map();
       
       for (const slot of slotsAtTime) {
         if (slot.programId && slot.semester && slot.section) {
-          const sectionKey = `${slot.programId._id}-${slot.semester}-${slot.section}`;
+          const programIdStr = slot.programId._id ? slot.programId._id.toString() : slot.programId.toString();
+          // Include lab group in the key so different lab groups don't conflict
+          const labGroupKey = slot.labGroup || 'none';
+          const sectionKey = `${programIdStr}-${slot.semester}-${slot.section}-${labGroupKey}`;
+          
           if (sectionMap.has(sectionKey)) {
             // Section conflict found
             const conflictingSlot = sectionMap.get(sectionKey);

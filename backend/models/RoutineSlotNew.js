@@ -330,12 +330,16 @@ routineSlotSchema.statics.findConflicts = function(dayIndex, slotIndex, teacherI
     ]
   };
   
-  // Add recurrence pattern checking if provided
+  // Add recurrence pattern filtering if provided
   if (weekPattern) {
-    query.$or.push(
-      { 'recurrence.type': 'weekly' },
-      { 'recurrence.pattern': weekPattern }
-    );
+    query.$and = query.$and || [];
+    query.$and.push({
+      $or: [
+        { 'recurrence.type': 'weekly' },
+        { 'recurrence.type': { $exists: false } },
+        { 'recurrence.pattern': weekPattern }
+      ]
+    });
   }
   
   return this.find(query);

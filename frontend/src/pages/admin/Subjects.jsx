@@ -179,7 +179,7 @@ const Subjects = () => {
     },
     onSuccess: () => {
       message.success('Subject created successfully');
-      queryClient.invalidateQueries(['subjects']);
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
       setEditModalVisible(false);
       setEditingSubject(null);
       form.resetFields();
@@ -196,7 +196,7 @@ const Subjects = () => {
     },
     onSuccess: () => {
       message.success('Subject updated successfully');
-      queryClient.invalidateQueries(['subjects']);
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
       setEditModalVisible(false);
       setEditingSubject(null);
       form.resetFields();
@@ -213,7 +213,7 @@ const Subjects = () => {
     },
     onSuccess: () => {
       message.success('Subject deleted successfully');
-      queryClient.invalidateQueries(['subjects']);
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
     },
     onError: (error) => {
       console.error('Delete error:', error);
@@ -228,7 +228,7 @@ const Subjects = () => {
     onSuccess: (data) => {
       const count = data?.insertedCount || 0;
       message.success(`Successfully created subject for ${count} semester(s)`);
-      queryClient.invalidateQueries(['subjects']);
+      queryClient.invalidateQueries({ queryKey: ['subjects'] });
       setEditModalVisible(false);
       setEditingSubject(null);
       form.resetFields();
@@ -612,7 +612,7 @@ const Subjects = () => {
         open={editModalVisible}
         onOk={handleSave}
         onCancel={handleCancel}
-        confirmLoading={createMutation.isLoading || updateMutation.isLoading || createBulkMutation.isLoading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending || createBulkMutation.isPending}
         width={600}
       >
         <Form form={form} layout="vertical">
