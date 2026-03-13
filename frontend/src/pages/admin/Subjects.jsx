@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { subjectsAPI } from '../../services/subjectsAPI';
+import { subjectsAPI } from '../../services/api';
 import { useFilters, useFilteredData } from '../../hooks/useFilters';
 import {
   Card, 
