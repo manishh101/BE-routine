@@ -72,7 +72,7 @@ const validateAssignClassData = async (data) => {
       
       const [program, timeSlot] = await Promise.all([
         Program.findOne({ code: programCode.toUpperCase() }).lean(),
-        TimeSlot.findOne({ _id: slotIndex }).lean()
+        TimeSlot.findById(slotIndex).lean().catch(() => null)
       ]);
 
       console.log('🔍 Break validation results:', {
@@ -102,7 +102,7 @@ const validateAssignClassData = async (data) => {
       Subject.findById(subjectId).lean(),
       Teacher.find({ _id: { $in: teacherIds }, isActive: true }).lean(),
       Room.findById(roomId).lean(),
-      TimeSlot.findOne({ _id: slotIndex }).lean()
+      TimeSlot.findById(slotIndex).lean().catch(() => null)
     ]);
 
     if (!program) {
@@ -128,7 +128,8 @@ const validateAssignClassData = async (data) => {
 
     // Business rule validations
     if (room && classType === 'P' && room.type && !room.type.toLowerCase().includes('lab')) {
-      errors.push('Practical classes should typically be assigned to lab rooms');
+      // Log warning but don't block - practical classes CAN be in non-lab rooms
+      console.warn(`⚠️ Practical class assigned to non-lab room: ${room.name} (type: ${room.type})`);
     }
 
     // Allow multiple teachers for all class types, but log a warning for non-lab classes
@@ -565,7 +566,7 @@ exports.assignClass = async (req, res) => {
     if (classType === 'BREAK') {
       // For breaks, we only need timeSlot and program
       [timeSlot, program] = await Promise.all([
-        TimeSlot.findOne({ _id: slotIndex }).lean(),
+        TimeSlot.findById(slotIndex).lean().catch(() => null),
         Program.findOne({ code: programCode.toUpperCase() }).lean()
       ]);
       subject = null;
@@ -577,7 +578,7 @@ exports.assignClass = async (req, res) => {
         Subject.findById(subjectId).lean(),
         Teacher.find({ _id: { $in: teacherIds }, isActive: true }).lean(),
         Room.findById(roomId).lean(),
-        TimeSlot.findOne({ _id: slotIndex }).lean(),
+        TimeSlot.findById(slotIndex).lean().catch(() => null),
         Program.findOne({ code: programCode.toUpperCase() }).lean()
       ]);
     }
@@ -3691,7 +3692,7 @@ exports.getVacantRooms = async (req, res) => {
     });
 
     // Get time slot info for display
-    const timeSlot = await TimeSlot.findOne({ slotIndex: parseInt(slotIndex) });
+    const timeSlot = await TimeSlot.findById(parseInt(slotIndex)).lean().catch(() => null);
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     res.json({
@@ -4197,7 +4198,7 @@ exports.getVacantTeachers = async (req, res) => {
     });
 
     // Get time slot details
-    const timeSlot = await TimeSlot.findOne({ _id: parseInt(slotIndex) });
+    const timeSlot = await TimeSlot.findById(parseInt(slotIndex)).lean().catch(() => null);
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     res.json({
