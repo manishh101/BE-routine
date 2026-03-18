@@ -474,25 +474,36 @@ exports.assignClass = async (req, res) => {
     }
 
     // Check if slot already exists for this program/semester/section (Update vs Create)
-    const existingSlotQuery = {
-      programCode: programCode.toUpperCase(),
-      semester: parseInt(semester),
-      section: section.toUpperCase(),
-      dayIndex,
-      slotIndex,
-      semesterGroup: getSemesterGroupName(parseInt(semester))
-    };
-    // Include labGroup in query to prevent cross-contamination between Group A/B slots
-    if (classType === 'P') {
-      existingSlotQuery.labGroup = labGroup || 'ALL';
-    } else {
-      // For non-practical classes, look for slots without labGroup or with null
-      existingSlotQuery.$or = [
-        { labGroup: null },
-        { labGroup: { $exists: false } }
-      ];
+    let existingSlot = null;
+    
+    // 1. Try finding by ID if provided (most reliable for updates)
+    if (req.body.id) {
+      existingSlot = await RoutineSlot.findById(req.body.id);
     }
-    const existingSlot = await RoutineSlot.findOne(existingSlotQuery);
+    
+    // 2. Fallback to finding by position/context if no ID or ID not found
+    if (!existingSlot) {
+      const existingSlotQuery = {
+        programCode: programCode.toUpperCase(),
+        semester: parseInt(semester),
+        section: section.toUpperCase(),
+        dayIndex,
+        slotIndex,
+        semesterGroup: getSemesterGroupName(parseInt(semester))
+      };
+      
+      // Include labGroup in query to prevent cross-contamination between Group A/B slots
+      if (classType === 'P') {
+        existingSlotQuery.labGroup = labGroup || 'ALL';
+      } else {
+        // For non-practical classes, look for slots without labGroup or with null
+        existingSlotQuery.$or = [
+          { labGroup: null },
+          { labGroup: { $exists: false } }
+        ];
+      }
+      existingSlot = await RoutineSlot.findOne(existingSlotQuery);
+    }
 
     // Skip conflict detection for breaks
     if (classType !== 'BREAK') {

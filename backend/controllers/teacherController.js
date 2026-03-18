@@ -184,9 +184,11 @@ exports.getTeachers = async (req, res) => {
     const filter = {};
     
     if (departmentId) filter.departmentId = departmentId;
-    // Default to showing only active teachers unless explicitly requesting inactive
+    // Default to showing only active teachers unless explicitly requesting inactive or 'all'
     if (isActive !== undefined) {
-      filter.isActive = isActive === 'true';
+      if (isActive !== 'all') {
+        filter.isActive = isActive === 'true';
+      }
     } else {
       filter.isActive = true; // Default to active teachers only
     }

@@ -1695,12 +1695,15 @@ const RoutineGrid = ({
       console.error('❌ Error response data:', error.response?.data);
       console.error('❌ Error response status:', error.response?.status);
       
-      // Log the full errors array to see validation details
+      // Log the full errors array/object to see validation details
       if (error.response?.data?.errors) {
-        console.error('❌ Validation errors:', error.response.data.errors);
-        error.response.data.errors.forEach((err, idx) => {
-          console.error(`  Error ${idx + 1}:`, err);
-        });
+        const errors = error.response.data.errors;
+        console.error('❌ Validation errors:', errors);
+        if (Array.isArray(errors)) {
+          errors.forEach((err, idx) => console.error(`  Error ${idx + 1}:`, err));
+        } else if (typeof errors === 'object' && errors !== null) {
+          Object.values(errors).forEach((err, idx) => console.error(`  Error ${idx + 1}:`, err));
+        }
       }
       
       // Handle 409 conflict with force-save option

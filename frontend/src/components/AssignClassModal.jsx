@@ -863,7 +863,8 @@ const AssignClassModal = ({
       }
     }
 
-    if (values.classType === 'P' && !isElectiveClass && !values.labGroupType) errors.push('Lab group type is required for practical classes');
+    // Lab group type is no longer strictly required for practical/lab classes
+    // if (values.classType === 'P' && !isElectiveClass && !values.labGroupType) errors.push('Lab group type is required for practical classes');
 
     if (values.classType === 'P' && values.labGroupType === 'bothGroups') {
       if (useSameConfigForBothGroups) {
@@ -1047,6 +1048,7 @@ const AssignClassModal = ({
       
       // Simplified slot handling - just pass the slot IDs directly
       const baseClassData = {
+        id: existingClass?._id, // Pass ID for updates
         ...values,
         isMultiPeriod,
         slotIndexes: isMultiPeriod ? selectedSlots : [slotIndex],
@@ -1217,9 +1219,15 @@ const AssignClassModal = ({
 
         const labClassData = {
           ...baseClassData, 
-          labGroup: mapLabGroupType(labGroupType), // Use backend field name
+          labGroup: labGroupType ? mapLabGroupType(labGroupType) : 'ALL', // Use backend field name, map to ALL if no group selected
           isAlternativeWeek: isAlternativeWeek,
-          displayLabel: getLabDisplayLabel(labGroupType, isAlternativeWeek)
+          displayLabel: labGroupType ? getLabDisplayLabel(labGroupType, isAlternativeWeek) : (isAlternativeWeek ? '(Alt Week)' : ''),
+          // If no labGroupType is selected, ensure the standard fields are passed through
+          ...(!labGroupType && {
+            subjectId: baseClassData.subjectId,
+            teacherIds: baseClassData.teacherIds,
+            roomId: baseClassData.roomId
+          })
         };
         
         console.log('🚀 Lab class data being sent:', labClassData);
@@ -1512,57 +1520,74 @@ const AssignClassModal = ({
                 </Card>
               )}
               
-              {currentClassType === 'P' && !isElectiveClass && (
-                <>
-                  <Form.Item name="labGroupType" label="Lab Group Type" rules={[{ required: true, message: 'Please select lab group type' }]}>
-                    <Select placeholder="Select lab group type">
-                      <Option value="groupA"><Tag color="cyan">Only {getSectionLabGroups().groupA}</Tag></Option>
-                      <Option value="groupB"><Tag color="purple">Only {getSectionLabGroups().groupB}</Tag></Option>
-                      <Option value="bothGroups"><Tag color="magenta">{getSectionLabGroups().both}</Tag></Option>
-                    </Select>
-                  </Form.Item>
-                  
-                  {labGroupType && (
-                    <Form.Item name="isAlternativeWeek" valuePropName="checked" style={{ marginBottom: '12px' }}>
-                      <Checkbox 
-                        checked={isAlternativeWeek} 
-                        onChange={(e) => setIsAlternativeWeek(e.target.checked)}
-                      >
-                        <Text strong>Alternative Week</Text>
-                      </Checkbox>
-                    </Form.Item>
-                  )}
-                </>
-              )}
-              
+              {/* Lab Group Type and Scheduling Options */}
               {currentClassType && currentClassType !== 'BREAK' && (
-                <Form.Item style={{ marginBottom: '12px' }}>
-                  <Space align="center">
-                    <Checkbox checked={isMultiPeriod} onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIsMultiPeriod(checked);
-                      if (checked) {
-                        const currentIndex = availableTimeSlots.findIndex(s => normalizeTimeSlotId(s._id) === normalizeTimeSlotId(slotIndex));
-                        if (currentIndex >= 0 && currentIndex + 1 < availableTimeSlots.length) {
-                          setSelectedSlots([normalizeTimeSlotId(availableTimeSlots[currentIndex]._id), normalizeTimeSlotId(availableTimeSlots[currentIndex + 1]._id)]);
-                        } else {
-                          setSelectedSlots([normalizeTimeSlotId(slotIndex)]);
-                        }
-                      } else {
-                        setSelectedSlots([normalizeTimeSlotId(slotIndex)]);
-                      }
-                    }}>
-                      <Text strong>Multi-Period Class</Text>
-                    </Checkbox>
-                    {isMultiPeriod && (
-                      <Select mode="multiple" size="small" placeholder="Select periods" value={selectedSlots}
-                        onChange={(slots) => setSelectedSlots([...slots].sort((a, b) => availableTimeSlots.findIndex(s => normalizeTimeSlotId(s._id) === a) - availableTimeSlots.findIndex(s => normalizeTimeSlotId(s._id) === b)))}
-                        style={{ minWidth: '200px' }} maxTagCount={3}>
-                        {availableTimeSlots.map(slot => (<Option key={slot._id} value={normalizeTimeSlotId(slot._id)}>{slot.label}</Option>))}
-                      </Select>
+                <div style={{ backgroundColor: '#f0f5ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #adc6ff' }}>
+                  <Row gutter={16}>
+                    {currentClassType === 'P' && !isElectiveClass && (
+                      <Col span={12}>
+                        <Form.Item 
+                          name="labGroupType" 
+                          label={<Text strong>Lab Group Type (Optional)</Text>} 
+                          style={{ marginBottom: '8px' }}
+                        >
+                          <Select 
+                            placeholder="Select lab group (or leave for ALL)" 
+                            allowClear
+                            onChange={(val) => setLabGroupType(val)}
+                          >
+                            <Option value="groupA"><Tag color="cyan">Only {getSectionLabGroups().groupA}</Tag></Option>
+                            <Option value="groupB"><Tag color="purple">Only {getSectionLabGroups().groupB}</Tag></Option>
+                            <Option value="bothGroups"><Tag color="magenta">{getSectionLabGroups().both}</Tag></Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
                     )}
-                  </Space>
-                </Form.Item>
+                    <Col span={currentClassType === 'P' && !isElectiveClass ? 12 : 24}>
+                      <Text strong style={{ display: 'block', marginBottom: '8px' }}>Scheduling Options</Text>
+                      <Space direction="vertical" size={4}>
+                        {currentClassType === 'P' && (
+                          <Form.Item name="isAlternativeWeek" valuePropName="checked" style={{ marginBottom: '4px' }}>
+                            <Checkbox 
+                              checked={isAlternativeWeek} 
+                              onChange={(e) => setIsAlternativeWeek(e.target.checked)}
+                            >
+                              <Text>Alternative Week (Odd/Even)</Text>
+                            </Checkbox>
+                          </Form.Item>
+                        )}
+                        
+                        <Form.Item style={{ marginBottom: '0' }}>
+                          <Space align="center" wrap>
+                            <Checkbox checked={isMultiPeriod} onChange={(e) => {
+                              const checked = e.target.checked;
+                              setIsMultiPeriod(checked);
+                              if (checked) {
+                                const currentIndex = availableTimeSlots.findIndex(s => normalizeTimeSlotId(s._id) === normalizeTimeSlotId(slotIndex));
+                                if (currentIndex >= 0 && currentIndex + 1 < availableTimeSlots.length) {
+                                  setSelectedSlots([normalizeTimeSlotId(availableTimeSlots[currentIndex]._id), normalizeTimeSlotId(availableTimeSlots[currentIndex + 1]._id)]);
+                                } else {
+                                  setSelectedSlots([normalizeTimeSlotId(slotIndex)]);
+                                }
+                              } else {
+                                setSelectedSlots([normalizeTimeSlotId(slotIndex)]);
+                              }
+                            }}>
+                              <Text>Multi-Period Class</Text>
+                            </Checkbox>
+                            {isMultiPeriod && (
+                              <Select mode="multiple" size="small" placeholder="Select periods" value={selectedSlots}
+                                onChange={(slots) => setSelectedSlots([...slots].sort((a, b) => availableTimeSlots.findIndex(s => normalizeTimeSlotId(s._id) === a) - availableTimeSlots.findIndex(s => normalizeTimeSlotId(s._id) === b)))}
+                                style={{ minWidth: '180px' }} maxTagCount={2}>
+                                {availableTimeSlots.map(slot => (<Option key={slot._id} value={normalizeTimeSlotId(slot._id)}>{slot.label}</Option>))}
+                              </Select>
+                            )}
+                          </Space>
+                        </Form.Item>
+                      </Space>
+                    </Col>
+                  </Row>
+                </div>
               )}
             </Col>
           </Row>
@@ -2082,8 +2107,9 @@ const AssignClassModal = ({
                   )}
                 </div>
               ) : (
-                // Single subject interface for non-elective classes
-                <Row gutter={16}>
+                // Single subject interface for non-elective classes, or practical classes without 'bothGroups' labGroupType
+                (!currentClassType || currentClassType !== 'P' || labGroupType !== 'bothGroups') && (
+                  <Row gutter={16}>
                   <Col span={24}>
                     <Form.Item name="subjectId" label="Subject" rules={[{ required: true }]}>
                       <Select 
@@ -2111,11 +2137,12 @@ const AssignClassModal = ({
                     </Form.Item>
                   </Col>
                 </Row>
+                )
               )}
               
 
               
-              {!isElectiveClass && (
+              {(!isElectiveClass && (!currentClassType || currentClassType !== 'P' || labGroupType !== 'bothGroups')) && (
                 <Row gutter={16}>
                   <Col span={12}>
                     <Form.Item name="teacherIds" label="Teacher(s)" rules={[{ required: true }]}>

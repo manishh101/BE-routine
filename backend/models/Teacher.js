@@ -252,7 +252,6 @@ TeacherSchema.statics.findByDepartment = function(departmentId) {
 
 // Business Rules Validation
 TeacherSchema.pre('save', async function(next) {
-  // ShortName must be unique within department (relaxed for now to allow migration)
   if (this.isModified('shortName') || this.isModified('departmentId')) {
     const existing = await this.constructor.findOne({
       shortName: this.shortName,
@@ -261,19 +260,37 @@ TeacherSchema.pre('save', async function(next) {
     });
     
     if (existing) {
-      return next(new Error('ShortName must be unique within department'));
+      const err = new mongoose.Error.ValidationError(this);
+      err.errors.shortName = new mongoose.Error.ValidatorError({
+        message: 'ShortName must be unique within department',
+        path: 'shortName',
+        value: this.shortName
+      });
+      return next(err);
     }
   }
   
   // MaxWeeklyHours validation
   if (this.maxWeeklyHours > 24) {
-    return next(new Error('MaxWeeklyHours cannot exceed 24'));
+    const err = new mongoose.Error.ValidationError(this);
+    err.errors.maxWeeklyHours = new mongoose.Error.ValidatorError({
+      message: 'MaxWeeklyHours cannot exceed 24',
+      path: 'maxWeeklyHours',
+      value: this.maxWeeklyHours
+    });
+    return next(err);
   }
   
   // AvailableDays validation
   const validDays = [0, 1, 2, 3, 4, 5, 6];
   if (this.availableDays && !this.availableDays.every(day => validDays.includes(day))) {
-    return next(new Error('AvailableDays must be subset of [0,1,2,3,4,5,6]'));
+    const err = new mongoose.Error.ValidationError(this);
+    err.errors.availableDays = new mongoose.Error.ValidatorError({
+      message: 'AvailableDays must be subset of [0,1,2,3,4,5,6]',
+      path: 'availableDays',
+      value: this.availableDays
+    });
+    return next(err);
   }
   
   next();

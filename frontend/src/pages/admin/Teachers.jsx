@@ -66,7 +66,7 @@ const Teachers = () => {
   const queryClient = useQueryClient();
 
   const fetchTeachers = useCallback(async () => {
-    return await teachersAPI.getTeachers();
+    return await teachersAPI.getTeachers({ isActive: 'all' });
   }, []);
 
   const { data, isLoading, isError, error, refetch } = useQuery({

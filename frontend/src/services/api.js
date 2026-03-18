@@ -231,13 +231,13 @@ export const authAPI = {
 
 // Teachers API
 export const teachersAPI = {
-  getTeachers: () => {
-    return queuedRequest(() => api.get('/teachers'));
+  getTeachers: (params = {}) => {
+    return queuedRequest(() => api.get('/teachers', { params }));
   },
 
   // Alias for backward compatibility
-  getAllTeachers: () => {
-    return queuedRequest(() => api.get('/teachers'));
+  getAllTeachers: (params = {}) => {
+    return queuedRequest(() => api.get('/teachers', { params }));
   },
   
   getTeacher: (id) => {
