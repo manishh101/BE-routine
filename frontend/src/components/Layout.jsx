@@ -43,14 +43,14 @@ const Layout = () => {
     const handleResize = () => {
       const width = window.innerWidth;
       setIsMobile(width <= 768); // Use <= 768 for consistent mobile detection
-      
+
       // Auto-collapse sidebar on tablet and smaller screens
       if (width < 1024) {
         setCollapsed(true);
       } else {
         setCollapsed(false);
       }
-      
+
       // Close mobile drawer when screen becomes large
       if (width >= 768) {
         setMobileDrawerVisible(false);
@@ -59,10 +59,10 @@ const Layout = () => {
 
     // Initial check
     handleResize();
-    
+
     // Add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -83,7 +83,7 @@ const Layout = () => {
         }
       }
     };
-    
+
     syncUser();
     window.addEventListener('storage', syncUser);
     return () => window.removeEventListener('storage', syncUser);
@@ -91,9 +91,9 @@ const Layout = () => {
 
   // Public menu items (available to everyone)
   const publicMenuItems = [
-    { 
-      key: '/', 
-      icon: <DashboardOutlined style={{fontSize: '18px', color: location.pathname === '/' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/',
+      icon: <DashboardOutlined style={{ fontSize: '18px', color: location.pathname === '/' ? '#fff' : '#6b7280' }} />,
       label: 'Dashboard',
       title: collapsed ? 'Dashboard' : undefined,
       style: {
@@ -106,9 +106,9 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/program-routine', 
-      icon: <CalendarOutlined style={{fontSize: '18px', color: location.pathname === '/program-routine' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/program-routine',
+      icon: <CalendarOutlined style={{ fontSize: '18px', color: location.pathname === '/program-routine' ? '#fff' : '#6b7280' }} />,
       label: 'Class Routine',
       title: collapsed ? 'Class Routine' : undefined,
       style: {
@@ -120,9 +120,9 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/teacher-routine', 
-      icon: <TeamOutlined style={{fontSize: '18px', color: location.pathname === '/teacher-routine' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/teacher-routine',
+      icon: <TeamOutlined style={{ fontSize: '18px', color: location.pathname === '/teacher-routine' ? '#fff' : '#6b7280' }} />,
       label: 'Teacher Schedule',
       title: collapsed ? 'Teacher Schedule' : undefined,
       style: {
@@ -134,9 +134,9 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/room-routine', 
-      icon: <FileExcelOutlined style={{fontSize: '18px', color: location.pathname === '/room-routine' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/room-routine',
+      icon: <FileExcelOutlined style={{ fontSize: '18px', color: location.pathname === '/room-routine' ? '#fff' : '#6b7280' }} />,
       label: 'Room Schedule',
       title: collapsed ? 'Room Schedule' : undefined,
       style: {
@@ -148,29 +148,29 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    // { 
-    //   key: '/subjects', 
-    //   icon: <ReadOutlined style={{fontSize: '18px', color: location.pathname === '/subjects' ? '#fff' : '#6b7280'}} />, 
-    //   label: 'Syllabus',
-    //   title: collapsed ? 'Syllabus' : undefined,
-    //   style: {
-    //     fontWeight: location.pathname === '/subjects' ? 700 : 500,
-    //     background: location.pathname === '/subjects' ? '#667eea' : 'transparent',
-    //     color: location.pathname === '/subjects' ? '#fff' : 'inherit',
-    //     borderRadius: '6px',
-    //     margin: '0 8px 5px 8px',
-    //     width: 'calc(100% - 16px)'
-    //   }
-    // }
+    {
+      key: '/subjects',
+      icon: <ReadOutlined style={{ fontSize: '18px', color: location.pathname === '/subjects' ? '#fff' : '#6b7280' }} />,
+      label: 'Syllabus',
+      title: collapsed ? 'Syllabus' : undefined,
+      style: {
+        fontWeight: location.pathname === '/subjects' ? 700 : 500,
+        background: location.pathname === '/subjects' ? '#667eea' : 'transparent',
+        color: location.pathname === '/subjects' ? '#fff' : 'inherit',
+        borderRadius: '6px',
+        margin: '0 8px 5px 8px',
+        width: 'calc(100% - 16px)'
+      }
+    }
   ];
 
   // Admin-only menu items
   const adminMenuItems = [
     { type: 'divider' },
     // Removed 'Admin Panel' text as requested
-    { 
-      key: '/program-routine-manager', 
-      icon: <ScheduleOutlined style={{fontSize: '18px', color: location.pathname === '/program-routine-manager' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/program-routine-manager',
+      icon: <ScheduleOutlined style={{ fontSize: '18px', color: location.pathname === '/program-routine-manager' ? '#fff' : '#6b7280' }} />,
       label: 'Routine Manager',
       title: collapsed ? 'Routine Manager' : undefined,
       style: {
@@ -182,9 +182,9 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-     { 
-      key: '/admin/meeting-scheduler', 
-      icon: <ClockCircleOutlined style={{fontSize: '18px', color: location.pathname === '/admin/meeting-scheduler' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/admin/meeting-scheduler',
+      icon: <ClockCircleOutlined style={{ fontSize: '18px', color: location.pathname === '/admin/meeting-scheduler' ? '#fff' : '#6b7280' }} />,
       label: 'Meeting Scheduler',
       title: collapsed ? 'Meeting Scheduler' : undefined,
       style: {
@@ -196,9 +196,9 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    { 
-      key: '/teachers-manager', 
-      icon: <TeamOutlined style={{fontSize: '18px', color: location.pathname === '/teachers-manager' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/teachers-manager',
+      icon: <TeamOutlined style={{ fontSize: '18px', color: location.pathname === '/teachers-manager' ? '#fff' : '#6b7280' }} />,
       label: 'Teachers',
       title: collapsed ? 'Teachers' : undefined,
       style: {
@@ -224,23 +224,23 @@ const Layout = () => {
     //     width: 'calc(100% - 16px)'
     //   }
     // },
-    // { 
-    //   key: '/subjects-manager', 
-    //   icon: <ReadOutlined style={{fontSize: '18px', color: location.pathname === '/subjects-manager' ? '#fff' : '#6b7280'}} />, 
-    //   label: 'Subjects',
-    //   title: collapsed ? 'Subjects' : undefined,
-    //   style: {
-    //     fontWeight: location.pathname === '/subjects-manager' ? 700 : 500,
-    //     background: location.pathname === '/subjects-manager' ? '#667eea' : 'transparent',
-    //     color: location.pathname === '/subjects-manager' ? '#fff' : 'inherit',
-    //     borderRadius: '6px',
-    //     margin: '0 8px 5px 8px',
-    //     width: 'calc(100% - 16px)'
-    //   }
-    // },
-    { 
-      key: '/rooms-manager', 
-      icon: <HomeOutlined style={{fontSize: '18px', color: location.pathname === '/rooms-manager' ? '#fff' : '#6b7280'}} />, 
+    {
+      key: '/subjects-manager',
+      icon: <ReadOutlined style={{ fontSize: '18px', color: location.pathname === '/subjects-manager' ? '#fff' : '#6b7280' }} />,
+      label: 'Subjects',
+      title: collapsed ? 'Subjects' : undefined,
+      style: {
+        fontWeight: location.pathname === '/subjects-manager' ? 700 : 500,
+        background: location.pathname === '/subjects-manager' ? '#667eea' : 'transparent',
+        color: location.pathname === '/subjects-manager' ? '#fff' : 'inherit',
+        borderRadius: '6px',
+        margin: '0 8px 5px 8px',
+        width: 'calc(100% - 16px)'
+      }
+    },
+    {
+      key: '/rooms-manager',
+      icon: <HomeOutlined style={{ fontSize: '18px', color: location.pathname === '/rooms-manager' ? '#fff' : '#6b7280' }} />,
       label: 'Rooms',
       title: collapsed ? 'Rooms' : undefined,
       style: {
@@ -266,24 +266,24 @@ const Layout = () => {
     //     width: 'calc(100% - 16px)'
     //   }
     // },
-   
-    // { 
-    //   key: '/department-manager', 
-    //   icon: <BankOutlined style={{fontSize: '18px', color: location.pathname === '/department-manager' ? '#fff' : '#6b7280'}} />, 
-    //   label: 'Departments',
-    //   title: collapsed ? 'Departments' : undefined,
-    //   style: {
-    //     fontWeight: location.pathname === '/department-manager' ? 700 : 500,
-    //     background: location.pathname === '/department-manager' ? '#667eea' : 'transparent',
-    //     color: location.pathname === '/department-manager' ? '#fff' : 'inherit',
-    //     borderRadius: '6px',
-    //     margin: '0 8px 5px 8px',
-    //     width: 'calc(100% - 16px)'
-    //   }
-    // },
-    { 
-      key: '/timeslots-manager', 
-      icon: <BankOutlined style={{fontSize: '18px', color: location.pathname === '/timeslots-manager' ? '#fff' : '#6b7280'}} />, 
+
+    {
+      key: '/department-manager',
+      icon: <BankOutlined style={{ fontSize: '18px', color: location.pathname === '/department-manager' ? '#fff' : '#6b7280' }} />,
+      label: 'Departments',
+      title: collapsed ? 'Departments' : undefined,
+      style: {
+        fontWeight: location.pathname === '/department-manager' ? 700 : 500,
+        background: location.pathname === '/department-manager' ? '#667eea' : 'transparent',
+        color: location.pathname === '/department-manager' ? '#fff' : 'inherit',
+        borderRadius: '6px',
+        margin: '0 8px 5px 8px',
+        width: 'calc(100% - 16px)'
+      }
+    },
+    {
+      key: '/timeslots-manager',
+      icon: <BankOutlined style={{ fontSize: '18px', color: location.pathname === '/timeslots-manager' ? '#fff' : '#6b7280' }} />,
       label: 'Time Slots',
       title: collapsed ? 'Time Slots' : undefined,
       style: {
@@ -299,7 +299,7 @@ const Layout = () => {
 
   // Combine menu items based on user role
   let menuItems = [...publicMenuItems];
-  
+
   if (user?.role === 'admin') {
     menuItems = [...publicMenuItems, ...adminMenuItems];
   }
@@ -312,8 +312,8 @@ const Layout = () => {
       key: '/admin/login',
       icon: <UserOutlined />,
       label: 'Admin Login',
-      style: { 
-        background: 'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)', 
+      style: {
+        background: 'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)',
         color: '#667eea',
         fontWeight: 500,
         margin: '8px',
@@ -359,12 +359,12 @@ const Layout = () => {
             gap: '12px',
             marginBottom: '8px'
           }}>
-            <Avatar 
+            <Avatar
               size={48}
-              icon={<UserOutlined />} 
+              icon={<UserOutlined />}
               src={user.avatarUrl}
               style={{
-                background: user?.role === 'admin' 
+                background: user?.role === 'admin'
                   ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                   : 'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)',
                 border: '3px solid white',
@@ -393,7 +393,7 @@ const Layout = () => {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '3px 8px',
-                background: user?.role === 'admin' 
+                background: user?.role === 'admin'
                   ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                   : 'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)',
                 borderRadius: '12px',
@@ -438,7 +438,7 @@ const Layout = () => {
         border: '1px solid rgba(102, 126, 234, 0.08)'
       }
     },
-    { 
+    {
       type: 'divider',
       style: {
         margin: '8px 12px',
@@ -456,8 +456,8 @@ const Layout = () => {
           padding: '4px 0'
         }}>
           <div>
-            <div style={{ 
-              color: '#ffffff', 
+            <div style={{
+              color: '#ffffff',
               fontWeight: 600,
               fontSize: '14px',
               marginBottom: '2px'
@@ -518,9 +518,9 @@ const Layout = () => {
             items={menuItems}
             onClick={handleMenuClick}
             inlineCollapsed={collapsed}
-            style={{ 
-              borderRight: 0, 
-              height: 'calc(100% - 60px)', 
+            style={{
+              borderRight: 0,
+              height: 'calc(100% - 60px)',
               overflowY: 'auto',
               background: 'transparent',
               padding: '8px 0',
@@ -553,7 +553,7 @@ const Layout = () => {
               onClick={() => setMobileDrawerVisible(false)}
             />
           )}
-          
+
           {/* Mobile Sidebar */}
           <div
             style={{
@@ -581,9 +581,9 @@ const Layout = () => {
               background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
               color: 'white'
             }}>
-              <div 
-                style={{ 
-                  display: 'flex', 
+              <div
+                style={{
+                  display: 'flex',
                   alignItems: 'center',
                   cursor: 'pointer',
                   flex: 1
@@ -593,12 +593,12 @@ const Layout = () => {
                   setMobileDrawerVisible(false);
                 }}
               >
-                <ScheduleOutlined style={{ 
-                  fontSize: '24px', 
+                <ScheduleOutlined style={{
+                  fontSize: '24px',
                   color: 'white',
                   marginRight: '12px'
                 }} />
-                <span style={{ 
+                <span style={{
                   fontSize: '18px',
                   fontWeight: 600,
                   color: 'white',
@@ -633,7 +633,7 @@ const Layout = () => {
                 defaultSelectedKeys={[location.pathname]}
                 items={menuItems}
                 onClick={handleMenuClick}
-                style={{ 
+                style={{
                   borderRight: 0,
                   background: 'transparent',
                   fontSize: '14px'
@@ -646,9 +646,9 @@ const Layout = () => {
         </>
       )}
 
-      <AntLayout style={{ 
-        marginLeft: isMobile ? 0 : (collapsed ? 76 : 260), 
-        transition: 'margin-left 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)' 
+      <AntLayout style={{
+        marginLeft: isMobile ? 0 : (collapsed ? 76 : 260),
+        transition: 'margin-left 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)'
       }}>
         <Header style={{
           height: '56px',
@@ -671,9 +671,9 @@ const Layout = () => {
               type="text"
               icon={<MenuOutlined />}
               onClick={toggleSidebar}
-              style={{ 
-                fontSize: '20px', 
-                width: isMobile ? 44 : 40, 
+              style={{
+                fontSize: '20px',
+                width: isMobile ? 44 : 40,
                 height: isMobile ? 44 : 40,
                 minWidth: isMobile ? 44 : 40,
                 minHeight: isMobile ? 44 : 40,
@@ -694,22 +694,22 @@ const Layout = () => {
                 // Removed hover effect as requested
               }}
             />
-            
+
             {/* Logo */}
-            <div 
-              style={{ 
-                display: 'flex', 
+            <div
+              style={{
+                display: 'flex',
                 alignItems: 'center',
                 cursor: 'pointer'
               }}
               onClick={() => navigate('/')}
             >
-              <ScheduleOutlined style={{ 
-                fontSize: isMobile ? '24px' : '28px', 
+              <ScheduleOutlined style={{
+                fontSize: isMobile ? '24px' : '28px',
                 color: '#667eea',
                 marginRight: isMobile ? '6px' : '8px'
               }} />
-              <span style={{ 
+              <span style={{
                 fontSize: isMobile ? '18px' : '20px',
                 fontWeight: 600,
                 color: '#333',
@@ -723,7 +723,7 @@ const Layout = () => {
           </div>
           {user ? (
             <Dropdown
-              menu={{ 
+              menu={{
                 items: [
                   {
                     key: 'signout',
@@ -736,8 +736,8 @@ const Layout = () => {
                         padding: '8px 4px'
                       }}>
                         <div>
-                          <div style={{ 
-                            color: '#1f2937', 
+                          <div style={{
+                            color: '#1f2937',
                             fontWeight: 600,
                             fontSize: '14px',
                             marginBottom: '2px'
