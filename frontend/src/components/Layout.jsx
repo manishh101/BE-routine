@@ -210,20 +210,20 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    // { 
-    //   key: '/programs-manager', 
-    //   icon: <BookOutlined style={{fontSize: '18px', color: location.pathname === '/programs-manager' ? '#fff' : '#6b7280'}} />, 
-    //   label: 'Programs',
-    //   title: collapsed ? 'Programs' : undefined,
-    //   style: {
-    //     fontWeight: location.pathname === '/programs-manager' ? 700 : 500,
-    //     background: location.pathname === '/programs-manager' ? '#667eea' : 'transparent',
-    //     color: location.pathname === '/programs-manager' ? '#fff' : 'inherit',
-    //     borderRadius: '6px',
-    //     margin: '0 8px 5px 8px',
-    //     width: 'calc(100% - 16px)'
-    //   }
-    // },
+    { 
+      key: '/programs-manager', 
+      icon: <BookOutlined style={{fontSize: '18px', color: location.pathname === '/programs-manager' ? '#fff' : '#6b7280'}} />, 
+      label: 'Programs',
+      title: collapsed ? 'Programs' : undefined,
+      style: {
+        fontWeight: location.pathname === '/programs-manager' ? 700 : 500,
+        background: location.pathname === '/programs-manager' ? '#667eea' : 'transparent',
+        color: location.pathname === '/programs-manager' ? '#fff' : 'inherit',
+        borderRadius: '6px',
+        margin: '0 8px 5px 8px',
+        width: 'calc(100% - 16px)'
+      }
+    },
     {
       key: '/subjects-manager',
       icon: <ReadOutlined style={{ fontSize: '18px', color: location.pathname === '/subjects-manager' ? '#fff' : '#6b7280' }} />,
@@ -252,20 +252,20 @@ const Layout = () => {
         width: 'calc(100% - 16px)'
       }
     },
-    // { 
-    //   key: '/academic-calendar-manager', 
-    //   icon: <CalendarOutlined style={{fontSize: '18px', color: location.pathname === '/academic-calendar-manager' ? '#fff' : '#6b7280'}} />, 
-    //   label: 'Academic Calendar',
-    //   title: collapsed ? 'Academic Calendar' : undefined,
-    //   style: {
-    //     fontWeight: location.pathname === '/academic-calendar-manager' ? 700 : 500,
-    //     background: location.pathname === '/academic-calendar-manager' ? '#667eea' : 'transparent',
-    //     color: location.pathname === '/academic-calendar-manager' ? '#fff' : 'inherit',
-    //     borderRadius: '6px',
-    //     margin: '0 8px 5px 8px',
-    //     width: 'calc(100% - 16px)'
-    //   }
-    // },
+    { 
+      key: '/academic-calendar-manager', 
+      icon: <CalendarOutlined style={{fontSize: '18px', color: location.pathname === '/academic-calendar-manager' ? '#fff' : '#6b7280'}} />, 
+      label: 'Academic Calendar',
+      title: collapsed ? 'Academic Calendar' : undefined,
+      style: {
+        fontWeight: location.pathname === '/academic-calendar-manager' ? 700 : 500,
+        background: location.pathname === '/academic-calendar-manager' ? '#667eea' : 'transparent',
+        color: location.pathname === '/academic-calendar-manager' ? '#fff' : 'inherit',
+        borderRadius: '6px',
+        margin: '0 8px 5px 8px',
+        width: 'calc(100% - 16px)'
+      }
+    },
 
     {
       key: '/department-manager',

@@ -48,7 +48,9 @@ const PageLoader = () => (
     height: '100vh',
     background: '#f5f7fa'
   }}>
-    <Spin size="large" tip="Loading..." />
+    <Spin size="large">
+      <div style={{ padding: '50px' }} />
+    </Spin>
   </div>
 );
 

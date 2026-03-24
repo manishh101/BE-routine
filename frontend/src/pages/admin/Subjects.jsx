@@ -63,19 +63,29 @@ const Subjects = () => {
         let subjects = [];
         
         // Fetch subjects based on selected filters
+        let response;
         if (filters.program && filters.semester) {
           // Both program and semester selected - get specific subjects
-          const programSubjects = await subjectsAPI.getSubjectsByProgram(filters.program);
-          subjects = programSubjects.filter(subject => Number(subject.semester) === Number(filters.semester));
+          response = await subjectsAPI.getSubjectsByProgram(filters.program);
+          const data = response?.data || response || [];
+          subjects = (Array.isArray(data) ? data : []).filter(
+            subject => Number(subject.semester) === Number(filters.semester)
+          );
         } else if (filters.program) {
           // Only program selected - get all subjects for that program
-          subjects = await subjectsAPI.getSubjectsByProgram(filters.program);
+          response = await subjectsAPI.getSubjectsByProgram(filters.program);
+          const data = response?.data || response || [];
+          subjects = Array.isArray(data) ? data : [];
         } else if (filters.semester) {
           // Only semester selected - get all subjects for that semester
-          subjects = await subjectsAPI.getSubjectsBySemester(filters.semester);
+          response = await subjectsAPI.getSubjectsBySemester(filters.semester);
+          const data = response?.data || response || [];
+          subjects = Array.isArray(data) ? data : [];
         } else {
           // No filters - get all subjects
-          subjects = await subjectsAPI.getAllSubjects();
+          response = await subjectsAPI.getAllSubjects();
+          const data = response?.data || response || [];
+          subjects = Array.isArray(data) ? data : [];
         }
         
         return subjects;
@@ -175,7 +185,8 @@ const Subjects = () => {
   // Mutations
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      return await subjectsAPI.createSubject(data);
+      const response = await subjectsAPI.createSubject(data);
+      return response.data || response;
     },
     onSuccess: () => {
       message.success('Subject created successfully');
@@ -192,7 +203,8 @@ const Subjects = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      return await subjectsAPI.updateSubject(id, data);
+      const response = await subjectsAPI.updateSubject(id, data);
+      return response.data || response;
     },
     onSuccess: () => {
       message.success('Subject updated successfully');
@@ -209,7 +221,8 @@ const Subjects = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      return await subjectsAPI.deleteSubject(id);
+      const response = await subjectsAPI.deleteSubject(id);
+      return response.data || response;
     },
     onSuccess: () => {
       message.success('Subject deleted successfully');
@@ -223,7 +236,8 @@ const Subjects = () => {
 
   const createBulkMutation = useMutation({
     mutationFn: async (subjects) => {
-      return await subjectsAPI.createSubjectsBulk(subjects);
+      const response = await subjectsAPI.createSubjectsBulk(subjects);
+      return response.data || response;
     },
     onSuccess: (data) => {
       const count = data?.insertedCount || 0;

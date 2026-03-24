@@ -429,6 +429,7 @@ export const subjectsAPI = {
     () => api.get('/subjects'),
     'fetching subjects'
   ),
+  getAllSubjects: () => subjectsAPI.getSubjects(),
   getSubjectsByProgramAndSemester: async (programCode, semester) => {
     
     // Use queued requests for both API calls
@@ -473,7 +474,11 @@ export const subjectsAPI = {
     () => api.get(`/subjects/program/${programId}`),
     `fetching subjects for program ${programId}`
   ),
-  getSubjectsBySemester: (semester) => api.get(`/subjects/semester/${semester}`)
+  getSubjectsBySemester: (semester) => api.get(`/subjects/semester/${semester}`),
+  createSubject: (data) => api.post('/subjects', data),
+  updateSubject: (id, data) => api.put(`/subjects/${id}`, data),
+  deleteSubject: (id) => api.delete(`/subjects/${id}`),
+  createSubjectsBulk: (subjects) => api.post('/subjects/bulk', { subjects })
 };
 
 // Rooms API
